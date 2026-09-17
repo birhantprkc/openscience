@@ -10,6 +10,16 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
+- **Model options say the rate once.** The popover no longer repeats the
+  price under Fast mode, reassures about a context step that cannot happen,
+  or footnotes the fee. One Rate line reflects the selections above, in the
+  provider's own price (the Wallet's funding fee is named in the row's
+  tooltip and added at billing), and a second quiet line appears only when
+  the chosen context window can reach the long-prompt tier. Context windows
+  are labelled by size (`272K`, `1.05M`).
+
+### Changed
+
 - **Settings, redesigned.** The dialog follows one grammar on every page:
   a title with a single quiet line, small muted section labels, bordered
   cards whose rows are divided by hairlines, copy on the left and one control

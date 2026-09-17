@@ -96,7 +96,8 @@ const route = (providerID: string, variants: string[]) => ({
   reasoningOptions: [{ type: "effort", values: variants, default: "medium" }],
   contextOptions: [272000, 1050000],
   limit: { context: 1050000 },
-  cost: { input: 5, output: 30 },
+  // Wallet rates carry the 5.5% funding fee: a $5 / $30 provider price.
+  cost: { input: 5.275, output: 31.65 },
   pricing: { upstream_provider: "openrouter" },
 })
 const mount = () => {
@@ -143,7 +144,7 @@ test("redacted provider variants retain the real composer effort and Fast contro
 test("the composer's Fast toggle shows its price consequence from the route's catalog rates", async () => {
   const model = route("openrouter", ["low", "medium", "high"])
   fixture.setState({
-    models: [{ ...model, modes: { fast: { cost: { input: 10, output: 60, cache: { read: 1, write: 0 } } } } }],
+    models: [{ ...model, modes: { fast: { cost: { input: 10.55, output: 63.3, cache: { read: 1, write: 0 } } } } }],
     index: 0,
     effort: {},
     tier: {},
@@ -152,19 +153,22 @@ test("the composer's Fast toggle shows its price consequence from the route's ca
   host.querySelector<HTMLButtonElement>("[data-model-effort-chip]")!.click()
   await settle()
   expect(document.querySelector("[data-model-fast-toggle]")).not.toBeNull()
-  // The toggle states the price consequence of Fast; the footer row states
-  // the rate in force, so toggling Fast moves the numbers there.
+  // The footer row states the rate in force for the selections above, so
+  // toggling Fast moves the numbers there; nothing else on the surface
+  // repeats them.
   const text = (selector: string) => document.querySelector(selector)?.textContent?.replace(/\s+/g, " ").trim()
   const rate = () =>
     [text("[data-model-rate] .model-settings-heading"), text("[data-model-rate] .model-settings-rate-value")].join(" ")
-  expect(text("[data-model-fast-rate]")).toBe("2× the standard rate · $10.00 in · $60.00 out /1M")
+  expect(document.querySelector("[data-model-fast-rate]")).toBeNull()
   expect(rate()).toBe("Rate $5.00 in · $30.00 out /1M tokens")
   document.querySelector<HTMLInputElement>("[data-model-fast-toggle] input")!.click()
   await settle()
   expect(fixture.state.tier["openrouter/openai/gpt-5.6-sol"]).toBe("fast")
-  expect(text("[data-model-fast-rate]")).toBe("2× the standard rate")
-  expect(rate()).toBe("Fast rate $10.00 in · $60.00 out /1M tokens")
-  expect(text("[data-model-rate-basis]")).toContain("Wallet rate")
+  expect(rate()).toBe("Rate $10.00 in · $60.00 out /1M tokens")
+  expect(document.querySelector("[data-model-rate-basis]")).toBeNull()
+  expect(document.querySelector("[data-model-rate]")?.getAttribute("title")).toBe(
+    "Provider price · Ace adds the 5.5% funding fee at billing",
+  )
 })
 
 test("a provider metadata refresh restores options without replacing the chosen model", async () => {

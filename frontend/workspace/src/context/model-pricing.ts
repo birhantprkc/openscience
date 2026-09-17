@@ -183,15 +183,24 @@ export const tokenRate = {
   },
 }
 
-/** `$2.11 in · $10.55 out`, the shape every rate in the popover takes. */
+/** `$2.00 in · $10.00 out`, the shape every rate in the popover takes. */
 export function rateLine(cost: { input: number; output: number }) {
   return `${tokenRate.format(cost.input)} in · ${tokenRate.format(cost.output)} out`
+}
+
+/** Wallet rates arrive with the funding fee folded in ($2.11 for a $2.00
+ * model). The popover shows the provider's price and names the fee once in
+ * the tooltip, so the numbers match what the catalog and the provider quote. */
+export function providerRate(cost: Cost, rates: RouteRates): Cost {
+  if (rates.basis !== "wallet") return cost
+  const factor = 1 + (rates.feePercent ?? fundingFeePercent(undefined)) / 100
+  return { input: cost.input / factor, output: cost.output / factor }
 }
 
 /** Where the numbers come from, in a few words. */
 export function rateBasis(rates: RouteRates) {
   return rates.basis === "wallet"
-    ? `Wallet rate · includes the ${rates.feePercent ?? fundingFeePercent(undefined)}% funding fee`
+    ? `Provider price · Ace adds the ${rates.feePercent ?? fundingFeePercent(undefined)}% funding fee at billing`
     : "Catalog estimate · billed by your provider"
 }
 

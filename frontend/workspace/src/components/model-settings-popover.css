@@ -679,6 +679,23 @@
   margin: 0;
 }
 
+/* The tier a long prompt pays, stacked under the base rate in the same
+   two-column rhythm and one shade quieter. */
+.model-settings-rate--step {
+  min-height: 20px;
+  margin-top: 2px;
+}
+
+.model-settings-rate--step .model-settings-heading {
+  white-space: nowrap;
+}
+
+.model-settings-rate--step .model-settings-rate-value {
+  color: var(--model-control-muted);
+  font-size: var(--font-size-x-small);
+  line-height: 16px;
+}
+
 @media (min-width: 720px) {
   [data-model-settings-popover]:not([data-model-settings-view="root"]) {
     width: min(344px, calc(100vw - 24px));

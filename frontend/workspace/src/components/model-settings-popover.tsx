@@ -27,7 +27,7 @@ import {
 import { DialogSettings } from "./dialog-settings"
 import { modelGroup, modelGroupLabel, modelGroupLabelRank } from "./model-groups"
 import { exactRouteFastMode, type FastMode } from "./model-fast"
-import { rateBasis, rateLine, routeRates, type RouteRates } from "@/context/model-pricing"
+import { providerRate, rateBasis, rateLine, routeRates, type RouteRates } from "@/context/model-pricing"
 import { modelControl } from "./model-presentation"
 import { curateQuickModelRows, curateQuickModels } from "./model-quick"
 import "./model-settings-popover.css"
@@ -282,111 +282,96 @@ type ModelEffortPanelProps = {
   unavailable?: { loading: boolean; error: boolean; refresh: () => void }
 }
 
-export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => (
-  <div data-model-effort-panel>
-    <Show when={props.unavailable}>
-      {(unavailable) => (
-        <section
-          class="model-settings-option-section model-settings-options-unavailable"
-          aria-label={props.options.length > 0 ? "Current rates unavailable" : "Model options unavailable"}
-        >
-          <p>
-            {props.options.length > 0
-              ? "Current Ace rates have not loaded. Verified effort choices are still available."
-              : "Model options and current rates aren’t available yet for this Ace workspace."}
-          </p>
-          <Show when={unavailable().error}>
-            <p role="alert">Could not refresh model options. Try again.</p>
-          </Show>
-          <Button
-            type="button"
-            variant="secondary"
-            data-model-options-refresh
-            disabled={unavailable().loading}
-            onClick={() => unavailable().refresh()}
+export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
+  // The first pricing tier is the step a long prompt pays; a context cap at
+  // or below its threshold means the step is never reached.
+  const cap = () => {
+    const value = Number(props.context?.current)
+    return Number.isFinite(value) && value > 0 ? value : undefined
+  }
+  const step = () => {
+    const tier = props.rates?.tiers[0]
+    if (!tier || !props.context || props.context.options.length < 2) return
+    const limit = cap()
+    if (limit !== undefined && limit <= tier.threshold) return
+    return tier
+  }
+  return (
+    <div data-model-effort-panel>
+      <Show when={props.unavailable}>
+        {(unavailable) => (
+          <section
+            class="model-settings-option-section model-settings-options-unavailable"
+            aria-label={props.options.length > 0 ? "Current rates unavailable" : "Model options unavailable"}
           >
-            {unavailable().loading ? "Refreshing…" : "Refresh options"}
-          </Button>
-        </section>
-      )}
-    </Show>
-    <Show when={props.options.length > 0}>
-      <section
-        class="model-settings-option-section"
-        aria-label={
-          props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"
-        }
-      >
-        <div class="model-settings-heading">
-          {props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Effort"}
-        </div>
-        <ModelOptionList
-          id="model-effort-options"
-          kind="effort"
-          title={props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"}
-          current={props.current}
-          options={props.options}
-          compact
-          onSelect={props.onEffortSelect}
-        />
-      </section>
-    </Show>
-    <Show when={props.fast}>
-      {(fast) => (
-        <section class="model-settings-option-section model-settings-speed-section" aria-label="Fast mode">
-          <div class="model-settings-heading">Speed</div>
-          <div data-model-fast-toggle data-disabled={fast().offered ? undefined : "true"}>
-            <Switch
-              checked={fast().active}
-              disabled={!fast().offered}
-              onChange={(checked) => props.onTierSelect(checked ? "fast" : "standard")}
+            <p>
+              {props.options.length > 0
+                ? "Current Ace rates have not loaded. Verified effort choices are still available."
+                : "Model options and current rates aren’t available yet for this Ace workspace."}
+            </p>
+            <Show when={unavailable().error}>
+              <p role="alert">Could not refresh model options. Try again.</p>
+            </Show>
+            <Button
+              type="button"
+              variant="secondary"
+              data-model-options-refresh
+              disabled={unavailable().loading}
+              onClick={() => unavailable().refresh()}
             >
-              <span class="model-settings-fast-label">Fast mode</span>
-            </Switch>
+              {unavailable().loading ? "Refreshing…" : "Refresh options"}
+            </Button>
+          </section>
+        )}
+      </Show>
+      <Show when={props.options.length > 0}>
+        <section
+          class="model-settings-option-section"
+          aria-label={
+            props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"
+          }
+        >
+          <div class="model-settings-heading">
+            {props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Effort"}
           </div>
-          <Show when={fast().offered && props.rates?.fast ? props.rates : undefined}>
-            {(rates) => (
-              <p class="model-settings-consequence" data-model-fast-rate>
-                {rates().multiple ? `${rates().multiple}× the standard rate` : "Priority processing"}
-                <Show when={!fast().active && rates().fast}>
-                  {(cost) => (
-                    <>
-                      {" · "}
-                      {rateLine(cost())}
-                      <span class="model-settings-unit"> /1M</span>
-                    </>
-                  )}
-                </Show>
-              </p>
-            )}
-          </Show>
-          <Show when={fast().note}>
-            {(note) => (
-              <p class="model-settings-consequence" data-model-fast-note>
-                {note()}
-              </p>
-            )}
-          </Show>
+          <ModelOptionList
+            id="model-effort-options"
+            kind="effort"
+            title={
+              props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"
+            }
+            current={props.current}
+            options={props.options}
+            compact
+            onSelect={props.onEffortSelect}
+          />
         </section>
-      )}
-    </Show>
-    <Show when={props.context && props.context.options.length > 1 ? props.context : undefined}>
-      {(context) => {
-        const cap = () => {
-          const value = Number(context().current)
-          return Number.isFinite(value) && value > 0 ? value : undefined
-        }
-        // The first pricing tier is the step a long prompt pays; a cap at or
-        // below it means the step is never reached.
-        const tier = () => props.rates?.tiers[0]
-        const stepped = () => {
-          const step = tier()
-          const limit = cap()
-          if (!step) return
-          if (limit !== undefined && limit <= step.threshold) return { step, reached: false as const }
-          return { step, reached: true as const }
-        }
-        return (
+      </Show>
+      <Show when={props.fast}>
+        {(fast) => (
+          <section class="model-settings-option-section model-settings-speed-section" aria-label="Fast mode">
+            <div class="model-settings-heading">Speed</div>
+            <div data-model-fast-toggle data-disabled={fast().offered ? undefined : "true"}>
+              <Switch
+                checked={fast().active}
+                disabled={!fast().offered}
+                onChange={(checked) => props.onTierSelect(checked ? "fast" : "standard")}
+              >
+                <span class="model-settings-fast-label">Fast mode</span>
+              </Switch>
+            </div>
+            <Show when={fast().note}>
+              {(note) => (
+                <p class="model-settings-consequence" data-model-fast-note>
+                  {note()}
+                </p>
+              )}
+            </Show>
+          </section>
+        )}
+      </Show>
+      <Show when={props.context && props.context.options.length > 1 ? props.context : undefined}>
+        {(context) => (
           <section class="model-settings-option-section" aria-label="Context window">
             <div class="model-settings-heading">Context window</div>
             <ModelOptionList
@@ -398,45 +383,45 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => (
               compact
               onSelect={(id) => props.onContextSelect?.(id)}
             />
-            <Show when={stepped()}>
-              {(state) => (
-                <p class="model-settings-consequence" data-model-context-rate>
-                  <Show
-                    when={state().reached}
-                    fallback={`Standard rate throughout · no ${modelContext(state().step.threshold)} step`}
-                  >
-                    Past {modelContext(state().step.threshold)} input ·{" "}
-                    {rateLine(props.fast?.active && state().step.fast ? state().step.fast! : state().step.standard)}
-                    <span class="model-settings-unit"> /1M</span>
-                  </Show>
-                </p>
-              )}
-            </Show>
           </section>
-        )
-      }}
-    </Show>
-    <Show when={props.rates}>
-      {(rates) => {
-        const effective = () => (props.fast?.active && rates().fast ? rates().fast! : rates().standard)
-        return (
-          <section class="model-settings-option-section model-settings-rate-section" aria-label="Rate">
-            <div class="model-settings-rate" data-model-rate title={rateBasis(rates())}>
-              <span class="model-settings-heading">{props.fast?.active && rates().fast ? "Fast rate" : "Rate"}</span>
-              <span class="model-settings-rate-value">
-                {rateLine(effective())}
-                <span class="model-settings-unit"> /1M tokens</span>
-              </span>
-            </div>
-            <p class="model-settings-consequence" data-model-rate-basis>
-              {rateBasis(rates())}
-            </p>
-          </section>
-        )
-      }}
-    </Show>
-  </div>
-)
+        )}
+      </Show>
+      {/* One line says what the selections above cost. The pricing basis
+          (Wallet rate with its fee, or a catalog estimate) is in the tooltip
+          rather than on the surface; a step past the cheaper context tier is
+          the one addition, shown only when the chosen window can reach it. */}
+      <Show when={props.rates}>
+        {(rates) => {
+          const effective = () => (props.fast?.active && rates().fast ? rates().fast! : rates().standard)
+          return (
+            <section class="model-settings-option-section model-settings-rate-section" aria-label="Rate">
+              <div class="model-settings-rate" data-model-rate title={rateBasis(rates())}>
+                <span class="model-settings-heading">Rate</span>
+                <span class="model-settings-rate-value">
+                  {rateLine(providerRate(effective(), rates()))}
+                  <span class="model-settings-unit"> /1M tokens</span>
+                </span>
+              </div>
+              <Show when={step()}>
+                {(tier) => (
+                  <div class="model-settings-rate model-settings-rate--step" data-model-rate-step>
+                    <span class="model-settings-heading">Past {modelContext(tier().threshold)}</span>
+                    <span class="model-settings-rate-value">
+                      {rateLine(
+                        providerRate(props.fast?.active && tier().fast ? tier().fast! : tier().standard, rates()),
+                      )}
+                      <span class="model-settings-unit"> /1M tokens</span>
+                    </span>
+                  </div>
+                )}
+              </Show>
+            </section>
+          )
+        }}
+      </Show>
+    </div>
+  )
+}
 
 type ModelEffortPopoverProps = ModelEffortPanelProps & {
   value: string
@@ -1126,10 +1111,11 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
           }
           context={{
             current: String(local.model.context.current()),
+            // The options are sizes; the segmented control already says
+            // "choose one", so "cap" and "Full" only added words.
             options: local.model.context.list().map((value) => ({
               id: String(value),
-              label:
-                value === current()?.limit.context ? `Full · ${modelContext(value)}` : `${modelContext(value)} cap`,
+              label: modelContext(value),
             })),
           }}
           open={effortOpen()}

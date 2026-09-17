@@ -346,8 +346,8 @@ describe("reasoning effort and Fast mode", () => {
     const context = {
       current: "272000",
       options: [
-        { id: "272000", label: "272K cap" },
-        { id: "1050000", label: "Full · 1.05M" },
+        { id: "272000", label: "272K" },
+        { id: "1050000", label: "1.05M" },
       ],
     }
     const text = (host: Element, selector: string) =>
@@ -369,10 +369,18 @@ describe("reasoning effort and Fast mode", () => {
       }),
     )
     expect(capped.querySelector("table")).toBeNull()
-    expect(text(capped, "[data-model-fast-rate]")).toBe("2× the standard rate · $4.22 in · $25.32 out /1M")
-    expect(text(capped, "[data-model-context-rate]")).toBe("Standard rate throughout · no 272K step")
-    expect(rate(capped)).toBe("Rate $2.11 in · $12.66 out /1M tokens")
-    expect(text(capped, "[data-model-rate-basis]")).toBe("Wallet rate · includes the 5.5% funding fee")
+    // One rate line says what the selections cost; the multiplier, the
+    // "no step" reassurance and the fee basis are not on the surface. The
+    // basis stays reachable as the rate row's tooltip.
+    expect(capped.querySelector("[data-model-fast-rate]")).toBeNull()
+    expect(capped.querySelector("[data-model-context-rate]")).toBeNull()
+    expect(capped.querySelector("[data-model-rate-basis]")).toBeNull()
+    expect(rate(capped)).toBe("Rate $2.00 in · $12.00 out /1M tokens")
+    expect(capped.querySelector("[data-model-rate]")?.getAttribute("title")).toBe(
+      "Provider price · Ace adds the 5.5% funding fee at billing",
+    )
+    // A 272K cap never reaches the step, so nothing about it is shown.
+    expect(capped.querySelector("[data-model-rate-step]")).toBeNull()
 
     const full = mount(() =>
       web.createComponent(subject.ModelEffortPanel, {
@@ -386,10 +394,17 @@ describe("reasoning effort and Fast mode", () => {
       }),
     )
     expect(full.querySelector('[data-model-option="effort"]')).toBeNull()
-    // Fast on: the toggle's line no longer repeats numbers the footer shows.
-    expect(text(full, "[data-model-fast-rate]")).toBe("2× the standard rate")
-    expect(text(full, "[data-model-context-rate]")).toBe("Past 272K input · $8.44 in · $37.98 out /1M")
-    expect(rate(full)).toBe("Fast rate $4.22 in · $25.32 out /1M tokens")
+    // Fast on with the full window: the rate reflects Fast, and the step a
+    // long prompt pays appears beneath it, also at the Fast rate.
+    expect(full.querySelector("[data-model-fast-rate]")).toBeNull()
+    expect(full.querySelector("[data-model-context-rate]")).toBeNull()
+    expect(rate(full)).toBe("Rate $4.00 in · $24.00 out /1M tokens")
+    expect(
+      [
+        text(full, "[data-model-rate-step] .model-settings-heading"),
+        text(full, "[data-model-rate-step] .model-settings-rate-value"),
+      ].join(" "),
+    ).toBe("Past 272K $8.00 in · $36.00 out /1M tokens")
 
     // A provider route reports a catalog estimate and no fee.
     const byok = mount(() =>
@@ -404,7 +419,9 @@ describe("reasoning effort and Fast mode", () => {
     )
     expect(byok.querySelector("[data-model-fast-rate]")).toBeNull()
     expect(rate(byok)).toBe("Rate $2.00 in · $12.00 out /1M tokens")
-    expect(text(byok, "[data-model-rate-basis]")).toBe("Catalog estimate · billed by your provider")
+    expect(byok.querySelector("[data-model-rate]")?.getAttribute("title")).toBe(
+      "Catalog estimate · billed by your provider",
+    )
 
     // A route without Fast keeps the section, disabled, and says where it exists.
     const elsewhere = mount(() =>
@@ -464,8 +481,8 @@ describe("reasoning effort and Fast mode", () => {
         context: {
           current: selected.value,
           options: [
-            { id: "272000", label: "272K cap" },
-            { id: "1050000", label: "Full · 1.05M" },
+            { id: "272000", label: "272K" },
+            { id: "1050000", label: "1.05M" },
           ],
         },
         onEffortSelect: () => undefined,
@@ -545,8 +562,8 @@ describe("reasoning effort and Fast mode", () => {
         context: {
           current: "1050000",
           options: [
-            { id: "272000", label: "272K cap" },
-            { id: "1050000", label: "Full · 1.05M" },
+            { id: "272000", label: "272K" },
+            { id: "1050000", label: "1.05M" },
           ],
         },
         onEffortSelect: () => undefined,
@@ -556,6 +573,6 @@ describe("reasoning effort and Fast mode", () => {
     const trigger = host.querySelector<HTMLButtonElement>("[data-model-effort-chip]")!
     expect(trigger.textContent).toContain("Context")
     expect(trigger.textContent).not.toContain("Fast")
-    expect(trigger.getAttribute("aria-label")).toBe("Context window: Full · 1.05M. Model options")
+    expect(trigger.getAttribute("aria-label")).toBe("Context window: 1.05M. Model options")
   })
 })
