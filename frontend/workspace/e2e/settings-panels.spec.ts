@@ -2,18 +2,19 @@ import { test, expect } from "./fixtures"
 import { openSettings } from "./utils"
 
 const panels = [
+  "General",
+  "Ace",
   "Models",
   "Local models",
   "Skills",
   "Tools",
   "Connectors",
+  "Credentials",
   "Compute",
   "Permissions",
   "Network",
   "Sandbox",
-  "Credentials",
   "Storage",
-  "General",
 ] as const
 
 test("every settings panel loads inside the fixed dialog shell", async ({ page, gotoSession }) => {

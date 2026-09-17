@@ -144,8 +144,13 @@ async function openModelOptions(page: Page) {
 /** Sets reasoning effort through the dedicated model-options popover. */
 export async function setModelEffort(page: Page, id: string) {
   const popover = await openModelOptions(page)
-  await popover.locator(`[data-model-option="effort"][data-model-option-id="${id}"]`).click()
-  await page.keyboard.press("Escape")
+  const option = popover.locator(`[data-model-option="effort"][data-model-option-id="${id}"]`)
+  await option.click()
+  // The click re-renders the option list; Escape typed before focus settles
+  // inside the popover is swallowed. Wait for the selection to land, then
+  // dismiss from within the popover itself.
+  await expect(option).toHaveAttribute("aria-checked", "true")
+  await popover.press("Escape")
   await expect(popover).toBeHidden()
 }
 

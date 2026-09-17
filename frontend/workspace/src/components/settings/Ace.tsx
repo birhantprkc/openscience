@@ -342,7 +342,7 @@ export default function Ace() {
 
           <Section id="model-access" title="Model access">
             <div class="settings-card models-access-card">
-              <ManagedInference onError={setError} />
+              <ManagedInference onError={setError} accountOwnedByHost />
             </div>
           </Section>
         </PanelBody>

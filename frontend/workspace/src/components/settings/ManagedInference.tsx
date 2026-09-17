@@ -94,7 +94,12 @@ const accountWallet = (signedIn: boolean): Wallet => ({
   aceEnabled: false,
 })
 
-export function ManagedInference(props: { onError?: (error: string | undefined) => void; services?: Services }) {
+export function ManagedInference(props: {
+  onError?: (error: string | undefined) => void
+  services?: Services
+  /** The host page has its own sign-in control (the Account card on Ace), so the Ace row must not repeat it. */
+  accountOwnedByHost?: boolean
+}) {
   const sdk = props.services?.sdk ?? useGlobalSDK()
   const globalSync = props.services?.sync ?? useGlobalSync()
   const platform = props.services?.platform ?? usePlatform()
@@ -431,9 +436,11 @@ export function ManagedInference(props: { onError?: (error: string | undefined) 
               {state.wallet?.signedIn ? "Use a different API key" : "Use an API key"}
             </button>
           </Show>
-          <Button size="small" variant="secondary" disabled={state.signingIn} onClick={actOnAccount}>
-            {accountAction()}
-          </Button>
+          <Show when={!(props.accountOwnedByHost && state.wallet && !state.wallet.signedIn)}>
+            <Button size="small" variant="secondary" disabled={state.signingIn} onClick={actOnAccount}>
+              {accountAction()}
+            </Button>
+          </Show>
           <LoginApproval active={state.signingIn} openLink={(url) => platform.openLink(url)} />
         </div>
       </div>
