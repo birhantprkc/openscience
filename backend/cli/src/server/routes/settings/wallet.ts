@@ -105,7 +105,18 @@ export function walletState(input: {
     // permission to spend from a workspace with a revoked role or usage limit.
     managedUnlocked: mode?.access_verified === true && mode.managed_supported && mode.managed_unlocked,
     aceEnabled: mode?.ace_enabled ?? false,
-    aceContract: { ...ACE_CONTRACT, fundingFeePercent: input.fundingFeePercent ?? ACE_CONTRACT.fundingFeePercent },
+    // The reload rule is the workspace's own configuration; the constants
+    // are only the public default for an account the gateway has not described.
+    aceContract: {
+      ...ACE_CONTRACT,
+      fundingFeePercent: input.fundingFeePercent ?? ACE_CONTRACT.fundingFeePercent,
+      ...(credits?.autoReload
+        ? {
+            reloadThresholdUsd: credits.autoReload.thresholdCents / 100,
+            reloadAmountUsd: credits.autoReload.amountCents / 100,
+          }
+        : {}),
+    },
     lifetimeSpentUsd: credits?.lifetimeSpentCents == null ? null : credits.lifetimeSpentCents / 100,
     transactions: input.transactions,
     ...(workspace ? { workspace } : {}),

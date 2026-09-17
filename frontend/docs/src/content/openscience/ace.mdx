@@ -52,7 +52,7 @@ Requests already in progress keep their original funding workspace. Confirm the 
 
 Open **Wallet** in the Models panel, or visit [billing](https://app.syntheticsciences.ai/billing).
 
-Usage is settled from the provider's reported cost plus a 5.5% funding fee, applied once per request, with no other markup; the card processing fee is shown separately at checkout. While automatic reloads are enabled, a purchased balance below $5 triggers a $20 reload. Account controls let you set a monthly usage limit and turn off future reloads.
+Usage is settled from the provider's reported cost plus a 5.5% funding fee, applied once per request, with no other markup; the card processing fee is shown separately at checkout. While automatic reloads are enabled, a purchased balance below the workspace's threshold ($5 by default) triggers one fixed reload ($20 by default); both are set under Billing, and the app shows the rule your workspace has configured. Account controls let you set a monthly usage limit and turn off future reloads.
 
 Switching to **Keys & subscriptions** changes model access: your keys and subscriptions serve the models they cover. The Wallet still funds what they cannot: a model no key covers, web search when no Firecrawl key is connected, and image generation. Each such call is marked in the trace (`funding: wallet`). Switching does **not** turn off automatic reloads. Use Wallet to change that authorization.
 

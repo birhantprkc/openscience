@@ -1798,6 +1798,8 @@ export namespace OpenScience {
     promotionalBalanceCents: number
     cycleCreditsRemainingCents: number
     lifetimeSpentCents: number | null
+    /** The workspace's own auto-reload rule, as the gateway states it; absent when the service omits it. */
+    autoReload?: { thresholdCents: number; amountCents: number } | null
   }
 
   export function walletCents(value: {
@@ -1848,6 +1850,7 @@ export namespace OpenScience {
         cycle_credits_remaining_cents?: number
         lifetime_spent_cents?: number
         redacted?: boolean
+        ace?: { threshold_cents?: number; target_cents?: number }
       }
       let lifetimeSpent = body.lifetime_spent_cents ?? null
       if (currentWallet && lifetimeSpent === null && options.lifetimeSpent !== false) {
@@ -1872,6 +1875,10 @@ export namespace OpenScience {
         promotionalBalanceCents: promotional,
         cycleCreditsRemainingCents: promotional,
         lifetimeSpentCents: lifetimeSpent,
+        autoReload:
+          typeof body.ace?.threshold_cents === "number" && typeof body.ace?.target_cents === "number"
+            ? { thresholdCents: body.ace.threshold_cents, amountCents: body.ace.target_cents }
+            : null,
       }
     } catch (error) {
       log.warn("wallet read failed", { error: error instanceof Error ? error.message : String(error) })
@@ -2168,6 +2175,7 @@ export namespace OpenScience {
     promotionalBalanceCents: z.number(),
     cycleCreditsRemainingCents: z.number(),
     lifetimeSpentCents: z.number().nullable(),
+    autoReload: z.object({ thresholdCents: z.number(), amountCents: z.number() }).nullable().optional(),
   })
   const StoredBilling = z.object({
     mode: z.enum(["byok", "managed"]),

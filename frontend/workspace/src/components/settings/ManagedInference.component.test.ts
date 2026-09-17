@@ -181,7 +181,7 @@ afterEach(() => {
 })
 
 describe("Ace account surface", () => {
-  test("separates exact purchased balance, authorization and routing with native disclosure", async () => {
+  test("one row each for Ace, the Wallet, auto-reload, the key and routing; one control per row", async () => {
     const { host } = await mount()
     await ready(() => host.textContent?.includes("$778.16") === true)
     expect(host.querySelector("dt")?.textContent).toBe("Wallet")
@@ -190,20 +190,22 @@ describe("Ace account surface", () => {
     expect(host.querySelector('[role="status"]')?.textContent).toBe("On")
     expect(button(host, "Ace").getAttribute("aria-pressed")).toBe("true")
     expect(button(host, "Manage Ace")).toBeDefined()
-    // Auto-reload is a row with its state and terms, not a disclosure.
+    expect(button(host, "Add funds")).toBeDefined()
+    // Auto-reload states the rule and whether it is in force; Ace's Manage is
+    // the one place both change, so the row carries no second button.
     const reload = host.querySelector("[data-model-reload]")!
     expect(reload.querySelector(".models-routing__status")?.textContent).toBe("On")
     expect(reload.querySelector(".models-routing__reload-terms")?.textContent).toBe(
       "Adds $20 when the Wallet drops below $5.",
     )
-    expect(button(host, "Manage in Wallet")).toBeDefined()
-    const details = host.querySelector("details")!
-    expect(details.open).toBe(false)
-    expect(details.querySelector("summary strong")?.textContent).toBe("Authorization terms")
-    details.querySelector("summary")!.click()
-    expect(details.open).toBe(true)
-    expect(details.textContent).toContain(subject.aceContractLabel(contract))
-    expect(details.textContent).toContain("does not turn off Ace or its auto-reload")
+    expect(reload.querySelector("button")).toBeNull()
+    expect(button(host, "Manage in Wallet")).toBeUndefined()
+    // The authorization contract is no longer on this surface.
+    expect(host.querySelector("details")).toBeNull()
+    expect(host.textContent).not.toContain("authorization, not a purchase")
+    // The routing options explain themselves on hover, not in a sentence below.
+    expect(button(host, "Keys & subscriptions").getAttribute("title")).toContain("connected keys")
+    expect(host.querySelector(".models-routing__consequence")).toBeNull()
   })
 
   test("uses server-provided reload amounts and never turns a routing choice into a payment", async () => {
@@ -229,7 +231,7 @@ describe("Ace account surface", () => {
     expect(state.links).toEqual([])
   })
 
-  test("shows authorization terms before activation and opens the existing consent flow", async () => {
+  test("before activation the reload row says what turning Ace on does, and Manage opens the consent flow", async () => {
     const { host, state } = await mount({ ...funded, balanceUsd: 0, aceEnabled: false, managedUnlocked: false })
     await ready(() => button(host, "Turn on Ace") !== undefined)
     expect(button(host, "Ace").disabled).toBe(true)
@@ -237,11 +239,8 @@ describe("Ace account surface", () => {
     expect(host.querySelector(".models-routing__reload-terms")?.textContent).toBe(
       "Turning on Ace adds $20 whenever the Wallet drops below $5.",
     )
-    expect(host.querySelector("details")?.open).toBe(true)
-    expect(host.querySelector("details")?.textContent).toContain("$0 authorization, not a purchase or subscription")
-    expect(host.querySelector("details")?.textContent).toContain(
-      "processing fee is disclosed separately before payment",
-    )
+    // The contract itself is read and accepted in the browser consent flow.
+    expect(host.querySelector("details")).toBeNull()
     button(host, "Turn on Ace").click()
     expect(state.links).toHaveLength(1)
     expect(state.links[0]).toContain("billing")
@@ -271,7 +270,8 @@ describe("Ace account surface", () => {
     // Signed out, the header row plus one sentence is the whole story.
     expect(host.querySelector("details")).toBeNull()
     expect(host.querySelector("[data-model-reload]")).toBeNull()
-    expect(host.textContent).toContain("Sign in, or paste an Ace API key from any workspace you belong to.")
+    expect(host.textContent).toContain("Managed models through your Wallet once you sign in.")
+    expect(host.textContent).toContain("Sign in with a key from any workspace you belong to.")
     expect(button(host, "Use an API key")).toBeDefined()
     expect(state.writes).toEqual([])
   })

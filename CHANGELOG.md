@@ -10,6 +10,18 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
+- **Model access, rebuilt.** The Ace page's Model access card is five rows
+  with one control each: Ace (state and Manage), Wallet (available amount and
+  Add funds), Auto-reload (its rule and state), API key, and Preferred model
+  access. The Authorization terms fold and its paragraph are gone; that
+  contract is read and accepted in the browser consent flow. The routing
+  options explain themselves on hover instead of in truncated sentences.
+- **Auto-reload shows your workspace's own rule.** The threshold and amount
+  come from the account rather than the public default, so a workspace set to
+  reload $50 below $10 reads that way. Docs say the same.
+
+### Changed
+
 - **Model options say the rate once.** The popover no longer repeats the
   price under Fast mode, reassures about a context step that cannot happen,
   or footnotes the fee. One Rate line reflects the selections above, in the

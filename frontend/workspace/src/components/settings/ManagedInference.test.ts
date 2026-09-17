@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test"
 import {
-  aceContractLabel,
   accountUnavailable,
   canSelectManaged,
   formatCreditBalance,
@@ -26,21 +25,6 @@ describe("Ace model access", () => {
     expect(walletBalanceLabel({ signedIn: true, balanceUsd: 20, availableUsd: 12.5 })).toBe("$12.50 available")
     expect(walletBalanceLabel({ signedIn: true, balanceUsd: 20, availableUsd: null })).toBe("$20.00 available")
     expect(walletBalanceLabel({ signedIn: false, balanceUsd: 20, availableUsd: 12.5 })).toBe("Not signed in")
-  })
-
-  test("renders the server-authoritative authorization and fixed reload terms", () => {
-    expect(
-      aceContractLabel({
-        activationAuthorizationUsd: 0,
-        reloadThresholdUsd: 5,
-        reloadAmountUsd: 20,
-        fundingFeePercent: 5.5,
-        processingFeeDisclosedSeparately: true,
-        reloadControlledByAce: true,
-      }),
-    ).toBe(
-      "Ace is a $0 authorization, not a purchase or subscription. While Ace is on, a purchased Wallet balance below $5 triggers one fixed $20 reload; the processing fee is disclosed separately before payment. Ace models are billed at the provider price plus the 5.5% funding fee, with no other markup.",
-    )
   })
 
   test("requires an authorized signed-in Wallet for managed routing", () => {

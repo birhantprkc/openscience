@@ -580,7 +580,6 @@
 
 @media (pointer: coarse) {
   .settings-dialog .settings-models-panel :where(button, [role="button"]),
-  .settings-dialog .settings-models-panel .models-routing__terms summary,
   .settings-dialog .settings-models-panel :where(input, [data-slot="select-select-trigger"]) {
     min-height: 44px;
   }
@@ -598,18 +597,6 @@
 .models-inference > * + * {
   border-top: 1px solid var(--settings-border);
 }
-.models-access-title {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--settings-space-2);
-}
-.models-access-title strong {
-  color: var(--color-text);
-  font-size: var(--settings-type-body);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--settings-leading-body);
-}
 .models-routing__status {
   color: var(--color-text-muted);
   font-size: var(--settings-type-helper);
@@ -619,7 +606,12 @@
   color: var(--color-icon-success);
 }
 .models-access-actions {
+  align-items: center;
   gap: var(--settings-space-3);
+}
+.models-access-actions .models-routing__status {
+  font-size: var(--settings-type-body);
+  line-height: var(--settings-leading-body);
 }
 .settings-dialog .models-routing__link {
   padding: 0;
@@ -681,62 +673,11 @@
   cursor: not-allowed;
   opacity: 0.55;
 }
-/* Authorization terms fold open in place. The details element is the row,
-   so it must lay out as a block for its summary to span the full width. */
-.settings-dialog details.models-routing__terms {
-  display: block;
-}
-.models-routing__terms summary {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: var(--settings-space-3);
-  list-style: none;
-  cursor: pointer;
-}
-.models-routing__terms summary > .settings-row-copy {
-  flex: 1 1 auto;
-}
-.models-routing__terms summary::-webkit-details-marker {
-  display: none;
-}
-.models-routing__terms summary:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-  border-radius: var(--settings-radius-control);
-}
-.models-routing__terms-chevron {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
-  margin-left: auto;
-  border-right: 1.5px solid var(--color-text-muted);
-  border-bottom: 1.5px solid var(--color-text-muted);
-  transform: rotate(-45deg) scale(0.7);
-  transition: transform 140ms ease;
-}
-.models-routing__terms[open] .models-routing__terms-chevron {
-  transform: rotate(45deg) scale(0.7);
-}
-.models-routing__terms-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--settings-space-2);
-  padding: var(--settings-space-2) 0 var(--settings-space-1);
-}
-.models-routing__terms-body p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--settings-type-helper);
-  line-height: var(--settings-leading-helper);
-  text-wrap: pretty;
-}
 /* Pasting an Ace API key: a row of its own under Ace. */
 .models-routing__key-input {
   width: 100%;
   min-width: 0;
   height: 28px;
-  margin-top: var(--settings-space-2);
   padding: 0 var(--settings-space-2);
   border: 1px solid var(--settings-border);
   border-radius: var(--settings-radius-control);

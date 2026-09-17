@@ -177,6 +177,17 @@ describe("Wallet account summary", () => {
     expect(stated.aceContract.reloadThresholdUsd).toBe(5)
   })
 
+  test("the reload rule is the workspace's own configuration, not the public default", () => {
+    // A workspace that reloads $50 whenever it drops below $10.
+    const configured = project({ credits: { ...credits, autoReload: { thresholdCents: 1000, amountCents: 5000 } } })
+    expect(configured.aceContract.reloadThresholdUsd).toBe(10)
+    expect(configured.aceContract.reloadAmountUsd).toBe(50)
+    // The gateway did not describe the rule: the public default stands in.
+    const unknown = project({ credits: { ...credits, autoReload: null } })
+    expect(unknown.aceContract.reloadThresholdUsd).toBe(5)
+    expect(unknown.aceContract.reloadAmountUsd).toBe(20)
+  })
+
   test("keeps a private workspace balance hidden without denying verified member access", () => {
     const result = project({ credits: { ...credits, balanceRedacted: true } })
     expect(result.balanceUsd).toBeNull()

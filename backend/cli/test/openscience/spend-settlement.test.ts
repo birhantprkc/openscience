@@ -38,6 +38,8 @@ const server = Bun.serve({
           available_cents: fixture.available,
           purchased_cents: fixture.wallet,
           lifetime_spent_cents: 0,
+          // This workspace reloads $50 below $10, not the public default.
+          ace: { enabled: true, auto_reload_enabled: true, threshold_cents: 1000, target_cents: 5000 },
         },
         { headers },
       )
@@ -99,6 +101,12 @@ test("a managed spend announces the stale summary at once and the settled one af
   const first = await OpenScience.getAccountSummary()
   expect(first?.credits?.balanceUsd).toBe(12)
   expect(first?.credits?.availableCents).toBe(1100)
+  // The workspace's own reload rule travels with the summary and survives the stored snapshot.
+  expect(first?.credits?.autoReload).toEqual({ thresholdCents: 1000, amountCents: 5000 })
+  expect(JSON.parse(await Bun.file(snapshotFile).text()).credits.autoReload).toEqual({
+    thresholdCents: 1000,
+    amountCents: 5000,
+  })
   expect(updates).toHaveLength(1)
 
   fixture.wallet = 1000
