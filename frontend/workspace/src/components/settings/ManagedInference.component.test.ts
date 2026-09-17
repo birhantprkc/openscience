@@ -199,7 +199,7 @@ describe("Ace account surface", () => {
     expect(button(host, "Manage in Wallet")).toBeDefined()
     const details = host.querySelector("details")!
     expect(details.open).toBe(false)
-    expect(details.querySelector("summary")?.textContent).toBe("Authorization terms")
+    expect(details.querySelector("summary strong")?.textContent).toBe("Authorization terms")
     details.querySelector("summary")!.click()
     expect(details.open).toBe(true)
     expect(details.textContent).toContain(subject.aceContractLabel(contract))

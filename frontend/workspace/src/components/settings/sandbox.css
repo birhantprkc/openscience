@@ -40,18 +40,15 @@
 }
 
 .settings-preferences-panel--sandbox .settings-sandbox-status-mark {
-  width: 32px;
-  height: 32px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--settings-radius-control);
-  background: var(--settings-surface-muted);
   color: var(--color-text-warning);
 }
 
 .settings-preferences-panel--sandbox .settings-sandbox-status-mark[data-tone="success"] {
-  background: color-mix(in srgb, var(--color-icon-success) 10%, transparent);
   color: var(--color-icon-success);
 }
 

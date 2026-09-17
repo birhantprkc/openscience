@@ -134,12 +134,18 @@
 }
 
 .settings-skills .skills-workspace__rows {
-  gap: 2px;
-  padding: 4px;
-  border: 0;
-  border-radius: var(--settings-radius-control);
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-card);
   background: var(--settings-surface);
-  box-shadow: var(--settings-shadow-card);
+  box-shadow: none;
+}
+.settings-skills .skills-workspace__rows > .skills-workspace__row + .skills-workspace__row {
+  border-top: 1px solid var(--settings-border);
+}
+.settings-skills .skills-workspace__rows > .skills-workspace__row {
+  border-radius: 0;
 }
 
 .settings-skills .skills-workspace__row,
@@ -213,4 +219,12 @@
   .settings-skills .skills-workspace__body {
     padding: 16px 20px 36px;
   }
+}
+
+/* Skill glyphs sit flat on the row, as every other settings row. */
+.settings-skills .skills-workspace__skill-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  background: transparent;
 }

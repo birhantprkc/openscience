@@ -14,6 +14,8 @@ import {
 } from "./settings/registry"
 import { SettingsNavContext } from "./settings/nav"
 import { SettingsPanelStack } from "./settings/panel-stack"
+import { settingsApi } from "./settings/api"
+import { useGlobalSDK } from "@/context/global-sdk"
 
 // Scoped to the settings dialog only. Gives shared primitives and legacy
 // panels one calm OpenScience hierarchy, grid, and surface stack without
@@ -29,7 +31,7 @@ const SETTINGS_STYLES = `
   --settings-space-6: 32px;
   --settings-space-7: 48px;
   --settings-radius-control: var(--radius-xs, 8px);
-  --settings-radius-card: var(--radius-md, 12px);
+  --settings-radius-card: 8px;
   --settings-radius-modal: var(--radius-lg, 16px);
   --settings-radius-pill: 999px;
   --settings-canvas: var(--color-bg);
@@ -52,11 +54,11 @@ const SETTINGS_STYLES = `
   --settings-toggle-active: var(--color-brand);
   --settings-shadow-modal: var(--atlas-shadow-md, var(--shadow-lg));
   --settings-shadow-card: none;
-  --settings-type-title: 18px;
-  --settings-type-heading: 13px;
+  --settings-type-title: 16px;
+  --settings-type-heading: 12px;
   --settings-type-body: 13px;
   --settings-type-helper: 12px;
-  --settings-leading-title: 24px;
+  --settings-leading-title: 22px;
   --settings-leading-body: 20px;
   --settings-leading-helper: 18px;
 }
@@ -215,9 +217,9 @@ const SETTINGS_STYLES = `
   overflow: hidden;
 }
 .settings-nav {
-  width: 208px;
+  width: 200px;
   min-height: 0;
-  flex: 0 0 208px;
+  flex: 0 0 200px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -246,7 +248,7 @@ const SETTINGS_STYLES = `
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--settings-space-4);
+  gap: var(--settings-space-3);
   padding-top: 2px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -258,20 +260,13 @@ const SETTINGS_STYLES = `
 .settings-nav__section {
   display: flex;
   flex-direction: column;
-  gap: var(--settings-space-1);
-}
-.settings-nav__label {
-  padding: 0 var(--settings-space-2) var(--settings-space-1);
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: var(--font-weight-regular);
-  letter-spacing: 0;
+  gap: 2px;
 }
 .settings-nav__item {
   min-width: 0;
-  min-height: 32px;
+  min-height: 28px;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
   gap: var(--settings-space-2);
   padding: 4px var(--settings-space-2);
@@ -317,15 +312,56 @@ const SETTINGS_STYLES = `
   outline-offset: 1px;
 }
 .settings-nav__footer {
-  display: flex;
+  display: grid;
   flex: 0 0 auto;
-  flex-direction: column;
-  gap: 1px;
-  padding: 12px 8px 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--settings-space-2);
+  margin-top: var(--settings-space-3);
+  padding: 6px var(--settings-space-2);
+  border: 0;
+  border-radius: var(--settings-radius-control);
+  background: transparent;
   color: var(--color-text-muted);
+  text-align: left;
 }
-.settings-nav__footer > span {
+.settings-nav__footer:hover {
+  background: var(--settings-surface-hover);
+}
+.settings-nav__footer:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.settings-nav__avatar {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--settings-accent-muted);
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+}
+.settings-nav__identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.settings-nav__identity-name {
   overflow: hidden;
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-nav__identity-meta {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -522,16 +558,16 @@ const SETTINGS_STYLES = `
   margin: 0;
   color: var(--color-text);
   font-size: var(--settings-type-title);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold, 600);
   line-height: var(--settings-leading-title);
   letter-spacing: -0.015em;
 }
 .settings-page-header p {
   max-width: 700px;
   color: var(--color-text-muted);
-  font-size: var(--settings-type-body);
+  font-size: var(--settings-type-helper);
   font-weight: var(--font-weight-regular);
-  line-height: var(--settings-leading-body);
+  line-height: var(--settings-leading-helper);
 }
 .settings-page-body {
   display: flex;
@@ -546,7 +582,7 @@ const SETTINGS_STYLES = `
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--settings-space-3);
+  gap: var(--settings-space-2);
 }
 .settings-section-heading {
   display: flex;
@@ -559,10 +595,11 @@ const SETTINGS_STYLES = `
 }
 .settings-section-heading h3 {
   margin: 0;
-  color: var(--color-text);
+  padding-inline: 2px;
+  color: var(--color-text-muted);
   font-size: var(--settings-type-heading);
   font-weight: var(--font-weight-medium);
-  line-height: 1.35;
+  line-height: 16px;
 }
 .settings-section-heading p {
   max-width: 640px;
@@ -588,7 +625,7 @@ const SETTINGS_STYLES = `
   gap: 12px;
 }
 .settings-list-item + .settings-list-item {
-  border-top: 0;
+  border-top: 1px solid var(--settings-border);
 }
 .settings-list-row {
   min-height: 56px;
@@ -693,12 +730,18 @@ const SETTINGS_STYLES = `
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px;
-  border: 0;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--settings-border);
   border-radius: var(--settings-radius-card);
   background: var(--settings-surface);
   box-shadow: none;
+}
+/* Rows inside one card are separated by hairlines, not by padding. */
+.settings-card > .settings-row + .settings-row,
+.settings-card > .settings-list-item + .settings-list-item,
+.settings-card > .settings-preference-row + .settings-preference-row {
+  border-top: 1px solid var(--settings-border);
 }
 .settings-form-card {
   display: flex;
@@ -707,14 +750,14 @@ const SETTINGS_STYLES = `
   padding: var(--settings-space-5);
 }
 .settings-row {
-  min-height: 56px;
+  min-height: 48px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--settings-space-3);
-  padding: 10px var(--settings-space-3);
+  padding: 8px var(--settings-space-3);
   border: 0;
-  border-radius: var(--settings-radius-control);
+  border-radius: 0;
 }
 .settings-row[data-interactive="true"] {
   cursor: pointer;
@@ -1376,6 +1419,99 @@ const SETTINGS_STYLES = `
   }
 }
 
+/* ── One grammar for every panel ───────────────────────────────────────────
+   Status is plain muted text, never a pill or a dot. Logos and glyphs sit
+   flat on the row at one size. Quiet actions are text links; primary row
+   actions are the small secondary button. */
+.settings-dialog .settings-preference-status,
+.settings-dialog .settings-status,
+.settings-dialog .settings-chip,
+.settings-dialog .connectors-status,
+.settings-dialog .scientific-tool-status,
+.settings-dialog .models-provider-source {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--settings-type-helper);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--settings-leading-helper);
+}
+.settings-dialog .settings-preference-status::before,
+.settings-dialog .settings-status__dot,
+.settings-dialog .scientific-tool-status__dot,
+.settings-dialog .connectors-status > span,
+.settings-dialog .models-provider-source::before {
+  display: none;
+}
+.settings-dialog .settings-preference-status[data-tone="success"],
+.settings-dialog .settings-status[data-tone="ready"],
+.settings-dialog .scientific-tool-status[data-tone="success"],
+.settings-dialog .connectors-status[data-tone="active"] {
+  color: var(--color-text-secondary);
+}
+.settings-dialog .settings-preference-status[data-tone="warning"],
+.settings-dialog .scientific-tool-status[data-tone="warning"],
+.settings-dialog .scientific-tool-status[data-tone="danger"] {
+  color: var(--color-text-warning);
+}
+.settings-dialog .settings-preference-icon,
+.settings-dialog .settings-provider-logo,
+.settings-dialog .settings-avatar,
+.settings-dialog .settings-empty-state__icon,
+.settings-dialog .models-provider-key-heading__icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.settings-dialog .settings-provider-logo[data-size="small"] {
+  width: 18px;
+  height: 18px;
+}
+.settings-dialog .settings-provider-logo img,
+.settings-dialog .settings-provider-logo svg,
+.settings-dialog .scientific-tool-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.settings-dialog .settings-preference-icon[data-tone="success"] {
+  color: var(--color-icon-success);
+}
+.settings-dialog .settings-preference-icon[data-tone="warning"] {
+  color: var(--color-text-warning);
+}
+.settings-dialog .settings-preference-action {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--settings-radius-control);
+  background: var(--settings-surface-muted);
+  color: var(--color-text);
+  font-size: var(--settings-type-helper);
+  font-weight: var(--font-weight-medium);
+}
+.settings-dialog .settings-preference-action[data-variant="quiet"] {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.settings-dialog [data-component="button"][data-size="small"] {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--settings-type-helper);
+}
+.settings-dialog .settings-row-copy strong,
+.settings-dialog .settings-list-copy strong {
+  font-size: var(--settings-type-body);
+  font-weight: var(--font-weight-medium);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .settings-dialog *,
   .settings-dialog *::before,
@@ -1387,6 +1523,37 @@ const SETTINGS_STYLES = `
   }
 }
 `
+
+type FooterAccount = { session: boolean; user?: { email?: string } }
+
+/** The signed-in person and the app version, as the rail's last row. */
+const SettingsAccountFooter: Component<{ version?: string; onOpen: () => void }> = (props) => {
+  const sdk = useGlobalSDK()
+  const platform = usePlatform()
+  const [account, setAccount] = createSignal<FooterAccount>()
+  const load = () =>
+    settingsApi<FooterAccount>(sdk.url, platform.fetch ?? fetch, "/account")
+      .then(setAccount)
+      .catch(() => undefined)
+  onMount(() => {
+    void load()
+    window.addEventListener("openscience:account-changed", load)
+  })
+  onCleanup(() => window.removeEventListener("openscience:account-changed", load))
+  const email = () => (account()?.session ? account()?.user?.email || "Signed in" : undefined)
+  const initial = () => (email() ?? "O").trim().charAt(0).toUpperCase()
+  return (
+    <button type="button" class="settings-nav__footer" onClick={() => props.onOpen()} aria-label="Open Ace account">
+      <span class="settings-nav__avatar" aria-hidden="true">
+        {initial()}
+      </span>
+      <span class="settings-nav__identity">
+        <span class="settings-nav__identity-name">{email() ?? "Not signed in"}</span>
+        <span class="settings-nav__identity-meta">OpenScience{props.version ? ` v${props.version}` : ""}</span>
+      </span>
+    </button>
+  )
+}
 
 export const DialogSettings: Component<{ initial?: SettingsPanelId }> = (props) => {
   const platform = usePlatform()
@@ -1527,8 +1694,7 @@ export const DialogSettings: Component<{ initial?: SettingsPanelId }> = (props) 
             <div id="settings-section-menu" class="settings-nav__sections" ref={navSections}>
               <For each={SETTINGS_SECTIONS}>
                 {(section) => (
-                  <div class="settings-nav__section">
-                    <span class="settings-nav__label">{section.label}</span>
+                  <div class="settings-nav__section" role="group" aria-label={section.label}>
                     <For each={SETTINGS_PANELS.filter((p) => p.section === section.id)}>
                       {(panel) => (
                         <button
@@ -1551,10 +1717,7 @@ export const DialogSettings: Component<{ initial?: SettingsPanelId }> = (props) 
                 )}
               </For>
             </div>
-            <div class="settings-nav__footer">
-              <span class="text-12-medium">OpenScience</span>
-              <span class="text-11-regular">v{platform.version}</span>
-            </div>
+            <SettingsAccountFooter version={platform.version} onOpen={() => void navigate("ace")} />
           </nav>
 
           {/* ── Right column ── */}

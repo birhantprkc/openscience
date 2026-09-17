@@ -3,6 +3,8 @@ import { SETTINGS_PANELS, SETTINGS_PANEL_IDS, SETTINGS_SECTIONS } from "./regist
 
 const root = new URL("./", import.meta.url)
 const modules: Record<(typeof SETTINGS_PANEL_IDS)[number], string> = {
+  general: "General",
+  ace: "Ace",
   models: "Models",
   "local-models": "LocalModels",
   skills: "Skills",
@@ -14,7 +16,6 @@ const modules: Record<(typeof SETTINGS_PANEL_IDS)[number], string> = {
   sandbox: "Sandbox",
   credentials: "Credentials",
   storage: "Storage",
-  general: "General",
 }
 
 describe("settings registry source contract", () => {
@@ -32,6 +33,8 @@ describe("settings registry source contract", () => {
 
   test("keeps every destination visible in the grouped rail", () => {
     expect(SETTINGS_PANELS.map((panel) => panel.title)).toEqual([
+      "General",
+      "Ace",
       "Models",
       "Local models",
       "Skills",
@@ -43,9 +46,13 @@ describe("settings registry source contract", () => {
       "Network",
       "Sandbox",
       "Storage",
-      "General",
     ])
-    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(["Inference", "Capabilities", "Runtime", "App"])
+    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual([
+      "Account",
+      "Inference",
+      "Capabilities",
+      "Runtime",
+    ])
     expect(SETTINGS_PANELS.every((panel) => "parent" in panel === false)).toBe(true)
   })
 
@@ -62,16 +69,24 @@ describe("settings registry source contract", () => {
     }
   })
 
-  test("keeps nested model and general surfaces in the audited source set", async () => {
+  test("keeps nested model, ace and general surfaces in the audited source set", async () => {
     const models = await Bun.file(new URL("Models.tsx", root)).text()
+    const ace = await Bun.file(new URL("Ace.tsx", root)).text()
     const general = await Bun.file(new URL("General.tsx", root)).text()
+    const permissions = await Bun.file(new URL("Permissions.tsx", root)).text()
 
-    expect(models).toContain("ManagedInference")
+    // Money and identity live on Ace; Models keeps connections and preferences.
+    expect(ace).toContain("<ManagedInference")
+    expect(ace).toContain('title="Account"')
+    expect(ace).toContain('"/account/login-browser"')
+    expect(models).not.toContain("ManagedInference")
     expect(models).toContain("<CodexConnection")
     expect(models).toContain("<ProviderKeys")
     expect(general).toContain("<AppearanceSections")
-    expect(general).toContain('title="Ace account"')
-    expect(general).toContain('"/account/login-browser"')
+    expect(general).not.toContain('"/account/login-browser"')
+    // Trace sharing is a consent control, so it sits with the permissions.
+    expect(permissions).toContain("<UsageLogging")
+    expect(general).not.toContain("<UsageLogging")
     expect(general).not.toContain('title="Navigation"')
     expect(general).not.toContain('title="Gateway"')
     expect(general).not.toContain('title="Trace"')

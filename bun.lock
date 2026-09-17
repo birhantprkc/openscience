@@ -137,6 +137,7 @@
         "fuzzysort": "catalog:",
         "iconoir": "7.12.1",
         "katex": "0.16.27",
+        "lucide-static": "0.453.0",
         "marked": "catalog:",
         "marked-katex-extension": "5.1.6",
         "marked-shiki": "catalog:",
@@ -1647,6 +1648,8 @@
     "lru_map": ["lru_map@0.4.1", "", {}, "sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg=="],
 
     "lucide-react": ["lucide-react@0.453.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc" } }, "sha512-kL+RGZCcJi9BvJtzg2kshO192Ddy9hv3ij+cPrVPWSRzgCWCVazoQJxOjAwgK53NomL07HB7GPHW120FimjNhQ=="],
+
+    "lucide-static": ["lucide-static@0.453.0", "", {}, "sha512-dopdOhJijPjBwoeundtWEw3YXvB7P96eE3pS6GSAG164l99Gp6OVwLb1e4uk8/MWLcek9SVWJU8CuBcLVzPkpw=="],
 
     "luxon": ["luxon@3.6.1", "", {}, "sha512-tJLxrKJhO2ukZ5z0gyjY1zPh3Rh88Ej9P7jNrZiHMUXHae1yvI2imgOZtL1TO8TW6biMMKfTtAOoEJANgtWBMQ=="],
 

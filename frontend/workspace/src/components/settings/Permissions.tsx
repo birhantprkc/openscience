@@ -19,6 +19,7 @@ import { useGlobalSync } from "@/context/global-sync"
 import { resolveProjectRoute } from "@/utils/project-route"
 import { PermissionToolDefaults } from "../settings-permissions"
 import { PanelBody, PanelHeader, PanelScroll, Section, steady } from "./_shared"
+import { UsageLogging } from "./UsageLogging"
 import "./preference-panels.css"
 
 interface StandingApproval {
@@ -408,6 +409,7 @@ const Permissions: Component = () => {
               </button>
             </div>
           </div>
+          <UsageLogging />
         </PanelBody>
       </div>
     </PanelScroll>

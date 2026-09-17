@@ -26,16 +26,21 @@ test("domainAllowed accepts exact domains and subdomains only", () => {
   expect(Network.domainAllowed("badexample.com", ["example.com"])).toBe(false)
 })
 
-test("new installs enforce every curated package and science group", async () => {
+test("new installs approve everything: no domain gate, every curated group on", async () => {
   const file = path.join(Global.Path.data, "settings", "network.json")
   await fs.rm(file, { force: true })
   const state = Network.defaults()
   expect(await Network.get()).toEqual(state)
-  expect(state.allowlistEnabled).toBe(true)
+  expect(state.allowlistEnabled).toBe(false)
   expect(state.enabled).toEqual(Network.CATALOG.map((group) => group.id))
   await Network.set(state)
 
   await expect(Network.assertAllowed("https://files.pythonhosted.org/pkg.whl")).resolves.toBeUndefined()
+  await expect(Network.assertAllowed("https://api.openalex.org/works")).resolves.toBeUndefined()
+  await expect(Network.assertAllowed("https://unknown.example/data")).resolves.toBeUndefined()
+
+  // Turning the gate on starts from the full catalog, so only unknown hosts are refused.
+  await Network.set({ ...state, allowlistEnabled: true })
   await expect(Network.assertAllowed("https://api.openalex.org/works")).resolves.toBeUndefined()
   await expect(Network.assertAllowed("https://unknown.example/data")).rejects.toThrow("allow-list")
 })
@@ -418,12 +423,12 @@ test("a mixed public/private DNS response is rejected before any fallback connec
 })
 
 test("literature defaults include conference archives and respect disabling the group", async () => {
-  await Network.set(Network.defaults())
+  await Network.set({ ...Network.defaults(), allowlistEnabled: true })
   for (const host of ["arxiv.org", "aclanthology.org", "openreview.net", "proceedings.mlr.press", "2027.eacl.org"]) {
     expect(await Network.blocked(`https://${host}/paper`)).toBeUndefined()
     expect(await Network.blocked(`https://${host}.example.com/paper`)).toBe(`${host}.example.com`)
   }
-  await Network.set({ ...Network.defaults(), enabled: [] })
+  await Network.set({ ...Network.defaults(), allowlistEnabled: true, enabled: [] })
   expect(await Network.blocked("https://aclanthology.org/paper")).toBe("aclanthology.org")
 })
 

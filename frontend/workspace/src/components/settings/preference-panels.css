@@ -31,11 +31,11 @@
 }
 
 .settings-preferences-panel .settings-section {
-  gap: var(--settings-space-3);
+  gap: var(--settings-space-2);
 }
 
 .settings-preferences-panel .settings-card {
-  border: 0;
+  border: 1px solid var(--settings-border);
   border-radius: var(--settings-radius-card);
   background: var(--settings-surface);
   box-shadow: none;
@@ -48,15 +48,15 @@
 }
 
 .settings-preferences-panel .settings-list-item + .settings-list-item {
-  border-top: 0;
+  border-top: 1px solid var(--settings-border);
 }
 
 .settings-preferences-panel .settings-row,
 .settings-preference-row {
   position: relative;
-  min-height: 56px;
+  min-height: 48px;
   gap: var(--settings-space-3);
-  padding: 10px var(--settings-space-3);
+  padding: 8px var(--settings-space-3);
   border-bottom: 0;
 }
 
@@ -547,7 +547,7 @@
   font-family: var(--font-family-mono);
 }
 
-.settings-storage-usage-row {
+.settings-preferences-panel .settings-storage-usage-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -555,7 +555,7 @@
   row-gap: var(--settings-space-2);
 }
 
-.settings-storage-cache {
+.settings-preferences-panel .settings-storage-cache {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;

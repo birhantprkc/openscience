@@ -20,7 +20,6 @@ import {
 import { resolveModelAccessRoute, type ModelRouteAccess } from "@/context/model-route-resolution"
 import { modelPricing, pricingUpstream } from "@/context/model-pricing"
 import { CodexConnection } from "./CodexConnection"
-import { ManagedInference } from "./ManagedInference"
 import { ProviderKeys } from "./ProviderKeys"
 import { ProviderLogo } from "./ProviderLogo"
 import { modelGroup, modelGroupLabel, modelGroupRank } from "../model-groups"
@@ -314,19 +313,13 @@ export default function Models() {
   return (
     <div class="settings-models-panel h-full min-h-0">
       <PanelScroll>
-        <PanelHeader title="Models" description="Connect model access and choose what appears while you work." />
+        <PanelHeader title="Models" description="Your connections, and which models appear while you work." />
         <PanelBody>
           <Show when={error()}>
             <div role="alert" class="settings-alert text-12-regular" data-tone="critical">
               {error()}
             </div>
           </Show>
-          <Section id="model-access" title="Model access">
-            <div class="settings-card models-access-card">
-              <ManagedInference onError={setError} />
-            </div>
-          </Section>
-
           <Section
             id="model-connections"
             title="Connections"

@@ -29,6 +29,8 @@ export type SettingsSection = "inference" | "capabilities" | "runtime" | "app"
 // rail order; the registry contract test verifies that no panel can be added,
 // removed, or left without the shared layout audit silently.
 export const SETTINGS_PANEL_IDS = [
+  "general",
+  "ace",
   "models",
   "local-models",
   "skills",
@@ -40,7 +42,6 @@ export const SETTINGS_PANEL_IDS = [
   "network",
   "sandbox",
   "storage",
-  "general",
 ] as const
 
 export type SettingsPanelId = (typeof SETTINGS_PANEL_IDS)[number]
@@ -58,8 +59,25 @@ export interface SettingsPanel {
   component: Component & { preload?: () => Promise<unknown> }
 }
 
-// Order here is the render order in the rail (top→bottom within each section).
+// Order here is the render order in the rail (top→bottom within each group).
+// The rail renders groups as spacing, not labels; the labels name the groups
+// for assistive technology.
 export const SETTINGS_PANELS: SettingsPanel[] = [
+  // ── Account ──
+  {
+    id: "general",
+    title: "General",
+    icon: "sliders",
+    section: "app",
+    component: lazy(() => import("./General")),
+  },
+  {
+    id: "ace",
+    title: "Ace",
+    icon: "sparkles",
+    section: "app",
+    component: lazy(() => import("./Ace")),
+  },
   // ── Inference ──
   {
     id: "models",
@@ -71,21 +89,22 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   {
     id: "local-models",
     title: "Local models",
-    icon: "brain",
+    icon: "hard-drive",
     section: "inference",
     component: lazy(() => import("./LocalModels")),
   },
+  // ── Capabilities ──
   {
     id: "skills",
     title: "Skills",
-    icon: "flask",
+    icon: "book-open",
     section: "capabilities",
     component: lazy(() => import("./Skills")),
   },
   {
     id: "scientific-tools",
     title: "Tools",
-    icon: "atom",
+    icon: "flask",
     section: "capabilities",
     component: lazy(() => import("./ScientificTools")),
   },
@@ -107,7 +126,7 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   {
     id: "compute",
     title: "Compute",
-    icon: "cpu",
+    icon: "server",
     section: "runtime",
     component: lazy(() => import("./Compute")),
   },
@@ -121,33 +140,25 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   {
     id: "network",
     title: "Network",
-    icon: "server",
+    icon: "globe",
     section: "runtime",
     component: lazy(() => import("./Network")),
   },
   {
     id: "sandbox",
     title: "Sandbox",
-    icon: "code",
+    icon: "terminal-square",
     section: "runtime",
     component: lazy(() => import("./Sandbox")),
   },
-  // ── App ──
-  { id: "storage", title: "Storage", icon: "folder", section: "app", component: lazy(() => import("./Storage")) },
-  {
-    id: "general",
-    title: "General",
-    icon: "sliders",
-    section: "app",
-    component: lazy(() => import("./General")),
-  },
+  { id: "storage", title: "Storage", icon: "database", section: "runtime", component: lazy(() => import("./Storage")) },
 ]
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string }[] = [
+  { id: "app", label: "Account" },
   { id: "inference", label: "Inference" },
   { id: "capabilities", label: "Capabilities" },
   { id: "runtime", label: "Runtime" },
-  { id: "app", label: "App" },
 ]
 
 export function findPanel(id: SettingsPanelId): SettingsPanel {
@@ -158,4 +169,4 @@ export async function preloadPanel(id: SettingsPanelId): Promise<void> {
   await findPanel(id).component.preload?.()
 }
 
-export const DEFAULT_PANEL: SettingsPanelId = "models"
+export const DEFAULT_PANEL: SettingsPanelId = "general"

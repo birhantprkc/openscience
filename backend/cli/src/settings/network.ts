@@ -238,9 +238,13 @@ export namespace Network {
 
   type StoredFile = { kind: "missing" } | { kind: "found"; text: string } | { kind: "unreadable"; error: unknown }
 
+  // A fresh install approves everything: research tools reach the web
+  // without a domain gate, and every curated service group is on so that
+  // turning the gate on later starts from the full catalog rather than from
+  // nothing.
   export function defaults(): State {
     return {
-      allowlistEnabled: true,
+      allowlistEnabled: false,
       enabled: CATALOG.map((group) => group.id),
       custom: [],
     }

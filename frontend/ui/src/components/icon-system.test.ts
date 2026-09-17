@@ -5,22 +5,31 @@ import { iconDefinitions, iconSpecs } from "./iconoir-registry"
 
 const read = (name: string) => readFileSync(fileURLToPath(new URL(name, import.meta.url)), "utf8")
 
-describe("shared Iconoir system", () => {
-  test("covers the stable public API with distinct semantic glyphs", () => {
-    expect(Object.keys(iconSpecs)).toHaveLength(110)
-    expect(new Set(Object.values(iconSpecs).map((entry) => entry.source)).size).toBe(97)
-
-    expect(iconSpecs.models.source).toBe("brain-electricity")
-    expect(iconSpecs.providers.source).toBe("database-settings")
-    expect(iconSpecs.task.source).toBe("task-list")
-    expect(iconSpecs.split.source).toBe("vertical-split")
-    expect(iconSpecs.network.source).toBe("network")
-    expect(iconSpecs.artifact.source).toBe("reports")
-    expect(iconSpecs.file.source).toBe("page")
-    expect(iconSpecs["folder-tree"].source).toBe("network-reverse")
-
+describe("shared icon system", () => {
+  test("covers the stable public API with distinct semantic glyphs from one pack", () => {
+    expect(Object.keys(iconSpecs)).toHaveLength(114)
+    const sources = Object.values(iconSpecs).map((entry) => entry.source)
+    expect(new Set(sources).size).toBe(107)
+    // Every glyph comes from Lucide except the few with no equivalent there.
+    const fallback = sources.filter((source) => !source.startsWith("lucide/"))
+    expect(fallback.sort()).toEqual(["discord", "pin-solid", "square", "star-solid"])
+    expect(iconSpecs.models.source).toBe("lucide/box")
+    expect(iconSpecs.providers.source).toBe("lucide/key-round")
+    expect(iconSpecs.task.source).toBe("lucide/list-todo")
+    expect(iconSpecs.split.source).toBe("lucide/columns-2")
+    expect(iconSpecs.network.source).toBe("lucide/network")
+    expect(iconSpecs.artifact.source).toBe("lucide/file-chart-column")
+    expect(iconSpecs.file.source).toBe("lucide/file")
+    expect(iconSpecs["folder-tree"].source).toBe("lucide/folder-tree")
     const concepts = ["models", "providers", "task", "split", "network", "artifact", "file", "folder-tree"] as const
     expect(new Set(concepts.map((name) => iconSpecs[name].source)).size).toBe(concepts.length)
+  })
+
+  test("Lucide bodies restore the stroke the root element carried and leave the width to CSS", () => {
+    const definition = iconDefinitions["chevron-down"]
+    expect(definition.body.startsWith('<g fill="none" stroke="currentColor"')).toBe(true)
+    expect(definition.body).not.toContain("stroke-width")
+    expect(definition.body).not.toContain("<!--")
   })
 
   test("extracts trusted local SVG bodies without nesting or remote loading", () => {

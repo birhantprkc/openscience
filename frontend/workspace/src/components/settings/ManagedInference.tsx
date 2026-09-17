@@ -8,7 +8,6 @@ import { usePlatform } from "@/context/platform"
 import { settingsApi } from "./api"
 import { LoginApproval } from "./LoginApproval"
 import { formatCreditBalance } from "./credit-balance"
-import { ProviderLogo } from "./ProviderLogo"
 import { createAccountRecovery } from "./account-recovery"
 import { ACCOUNT_DEADLINE_MS } from "./account-deadline"
 
@@ -387,92 +386,73 @@ export function ManagedInference(props: { onError?: (error: string | undefined) 
     return where && !wallet.workspace?.personal ? where : undefined
   }
 
-  return (
-    <div class="models-inference">
-      <div class="models-routing" aria-label="Model access">
-        <div class="models-routing__overview">
-          <div class="models-routing__identity">
-            <ProviderLogo id="synsci" label="Ace" />
-            <div class="models-routing__identity-copy">
-              <div class="models-routing__heading">
-                <strong>Ace</strong>
-                <span
-                  class="models-routing__status"
-                  data-active={state.account === "ready" && state.wallet?.aceEnabled ? "true" : undefined}
-                  role="status"
-                >
-                  {aceLabel()}
-                </span>
-              </div>
-              <span>
-                <Show
-                  when={state.wallet && !state.wallet.signedIn}
-                  fallback={
-                    <>
-                      Managed models, no provider keys.
-                      <Show when={originLabel()}>
-                        {(label) => <span class="models-routing__origin"> · {label()}</span>}
-                      </Show>
-                    </>
-                  }
-                >
-                  Sign in, or paste an Ace API key from any workspace you belong to. Your own provider keys stay
-                  separate.
-                </Show>
-              </span>
-            </div>
-          </div>
-          <div class="models-routing__account">
-            <dl class="models-routing__wallet">
-              <dt>Wallet</dt>
-              <dd
-                aria-live="polite"
-                class="models-account-summary__balance"
-                data-refreshing={state.wallet?.refreshing ? "true" : undefined}
-              >
-                <Show when={spendable() !== undefined} fallback={balanceLabel()}>
-                  {formatCreditBalance(spendable()!)} <span class="models-routing__wallet-unit">available</span>
-                </Show>
-                <Show when={state.wallet?.refreshing}>
-                  <span class="models-routing__sync"> Refreshing…</span>
-                </Show>
-              </dd>
-              <Show when={heldLabel()}>
-                {(held) => <span class="models-routing__held">{held()} held for turns in flight</span>}
-              </Show>
-            </dl>
-            <Button
-              class="settings-panel-action models-secondary-action"
-              size="small"
-              variant="secondary"
-              disabled={state.signingIn}
-              onClick={actOnAccount}
-            >
-              {accountAction()}
-            </Button>
-            <Show when={state.keyEntry === "closed"}>
-              <button
-                type="button"
-                class="models-routing__link"
-                data-model-access-use-key
-                onClick={() => setState("keyEntry", "open")}
-              >
-                {state.wallet?.signedIn ? "Use a different API key" : "Use an API key"}
-              </button>
-            </Show>
-            <LoginApproval active={state.signingIn} openLink={(url) => platform.openLink(url)} />
-          </div>
-        </div>
+  const walletDescription = () => {
+    if (state.wallet && !state.wallet.signedIn) return "Sign in to see the purchased balance."
+    return "Purchased funds Ace can spend."
+  }
 
-        <Show when={state.keyEntry !== "closed"}>
-          <form
-            class="models-routing__key"
-            data-model-access-key-form
-            onSubmit={(event) => {
-              event.preventDefault()
-              submitKey()
-            }}
-          >
+  return (
+    <div class="models-inference" aria-label="Model access">
+      {/* Ace: what it is, whether it is on, and the way in. */}
+      <div class="settings-row settings-preference-row models-access-row">
+        <div class="settings-row-copy">
+          <div class="models-access-title">
+            <strong>Ace</strong>
+            <span
+              class="models-routing__status"
+              data-active={state.account === "ready" && state.wallet?.aceEnabled ? "true" : undefined}
+              role="status"
+            >
+              {aceLabel()}
+            </span>
+          </div>
+          <span>
+            <Show
+              when={state.wallet && !state.wallet.signedIn}
+              fallback={
+                <>
+                  Managed models, no provider keys.
+                  <Show when={originLabel()}>{(label) => <> · {label()}</>}</Show>
+                </>
+              }
+            >
+              Sign in, or paste an Ace API key from any workspace you belong to. Your own provider keys stay separate.
+            </Show>
+          </span>
+        </div>
+        <div class="settings-preference-row__actions models-access-actions">
+          <Show when={state.keyEntry === "closed"}>
+            <button
+              type="button"
+              class="models-routing__link"
+              data-model-access-use-key
+              onClick={() => setState("keyEntry", "open")}
+            >
+              {state.wallet?.signedIn ? "Use a different API key" : "Use an API key"}
+            </button>
+          </Show>
+          <Button size="small" variant="secondary" disabled={state.signingIn} onClick={actOnAccount}>
+            {accountAction()}
+          </Button>
+          <LoginApproval active={state.signingIn} openLink={(url) => platform.openLink(url)} />
+        </div>
+      </div>
+
+      <Show when={state.keyEntry !== "closed"}>
+        <form
+          class="settings-row settings-preference-row models-routing__key"
+          data-model-access-key-form
+          onSubmit={(event) => {
+            event.preventDefault()
+            submitKey()
+          }}
+        >
+          <div class="settings-row-copy">
+            <strong>Ace API key</strong>
+            <span class="models-routing__key-note">
+              Billed to the workspace it was created in, even one outside the account signed in here. Signing out later
+              forgets it on this device without revoking it.
+            </span>
             <input
               type="password"
               class="models-routing__key-input"
@@ -484,14 +464,8 @@ export function ManagedInference(props: { onError?: (error: string | undefined) 
               onInput={(event) => setState("key", event.currentTarget.value)}
               aria-label="Ace API key"
             />
-            <Button
-              type="submit"
-              size="small"
-              variant="primary"
-              disabled={!state.key.trim() || state.keyEntry === "submitting"}
-            >
-              {state.keyEntry === "submitting" ? "Checking…" : "Connect"}
-            </Button>
+          </div>
+          <div class="settings-preference-row__actions">
             <Button
               type="button"
               size="small"
@@ -501,21 +475,52 @@ export function ManagedInference(props: { onError?: (error: string | undefined) 
             >
               Cancel
             </Button>
-            <p class="models-routing__key-note">
-              The key is billed to the workspace it was created in, even one outside the account signed in here. Signing
-              out later forgets it on this device without revoking it.
-            </p>
-          </form>
-        </Show>
+            <Button
+              type="submit"
+              size="small"
+              variant="primary"
+              disabled={!state.key.trim() || state.keyEntry === "submitting"}
+            >
+              {state.keyEntry === "submitting" ? "Checking…" : "Connect"}
+            </Button>
+          </div>
+        </form>
+      </Show>
 
-        <Show when={state.wallet?.signedIn && state.wallet.aceContract}>
-          {(contract) => (
-            <div class="models-routing__reload" data-model-reload>
-              <div class="models-routing__reload-row">
-                <strong>Auto-reload</strong>
-                <span class="models-routing__status" data-active={reloadActive() ? "true" : undefined}>
-                  {reloadActive() ? "On" : "Off"}
-                </span>
+      {/* Wallet: the spendable amount, with what is held by turns in flight. */}
+      <dl class="settings-row settings-preference-row models-routing__wallet">
+        <div class="settings-row-copy">
+          <dt>Wallet</dt>
+          <span>{walletDescription()}</span>
+          <Show when={heldLabel()}>
+            {(held) => <span class="models-routing__held">{held()} held for turns in flight</span>}
+          </Show>
+        </div>
+        <dd
+          aria-live="polite"
+          class="models-account-summary__balance settings-account-value"
+          data-refreshing={state.wallet?.refreshing ? "true" : undefined}
+        >
+          <Show when={spendable() !== undefined} fallback={balanceLabel()}>
+            {formatCreditBalance(spendable()!)} <span class="models-routing__wallet-unit">available</span>
+          </Show>
+          <Show when={state.wallet?.refreshing}>
+            <span class="models-routing__sync"> Refreshing…</span>
+          </Show>
+        </dd>
+      </dl>
+
+      <Show when={state.wallet?.signedIn && state.wallet.aceContract}>
+        {(contract) => (
+          <>
+            <div class="settings-row settings-preference-row" data-model-reload>
+              <div class="settings-row-copy">
+                <div class="models-access-title">
+                  <strong>Auto-reload</strong>
+                  <span class="models-routing__status" data-active={reloadActive() ? "true" : undefined}>
+                    {reloadActive() ? "On" : "Off"}
+                  </span>
+                </div>
                 <span class="models-routing__reload-terms">
                   <Show
                     when={reloadActive()}
@@ -524,75 +529,86 @@ export function ManagedInference(props: { onError?: (error: string | undefined) 
                     Adds ${contract().reloadAmountUsd} when the Wallet drops below ${contract().reloadThresholdUsd}.
                   </Show>
                 </span>
-                <button
-                  type="button"
-                  class="models-routing__link"
-                  onClick={() => platform.openLink(URLS.dashboardBilling)}
-                >
-                  Manage in Wallet
-                </button>
               </div>
-              <details
-                class="models-routing__terms"
-                open={state.wallet?.signedIn && !state.wallet.aceEnabled && !state.wallet.managedUnlocked}
-              >
-                <summary>Authorization terms</summary>
+              <div class="settings-preference-row__actions">
+                <Button size="small" variant="secondary" onClick={() => platform.openLink(URLS.dashboardBilling)}>
+                  Manage in Wallet
+                </Button>
+              </div>
+            </div>
+            <details
+              class="settings-row settings-preference-row models-routing__terms"
+              open={state.wallet?.signedIn && !state.wallet.aceEnabled && !state.wallet.managedUnlocked}
+            >
+              <summary>
+                <span class="settings-row-copy">
+                  <strong>Authorization terms</strong>
+                  <span>What turning Ace on authorizes, and how models are billed.</span>
+                </span>
+                <span class="models-routing__terms-chevron" aria-hidden="true" />
+              </summary>
+              <div class="models-routing__terms-body">
                 <p>{aceContractLabel(contract())}</p>
                 <Show when={state.wallet?.aceEnabled}>
                   <p>
                     Changing preferred model access does not turn off Ace or its auto-reload. Manage these in Wallet.
                   </p>
                 </Show>
-              </details>
-            </div>
-          )}
-        </Show>
+              </div>
+            </details>
+          </>
+        )}
+      </Show>
 
-        <div class="models-routing__preference">
-          <div class="models-routing__preference-copy">
-            <strong>Preferred model access</strong>
-            <p id={description} class="models-routing__description" aria-live="polite">
-              <Show when={state.saving} fallback="Which route a model uses when both could serve it.">
-                Saving {selected().title}…
-              </Show>
-              <Show when={!state.saving && state.refreshing}>
-                <span class="models-routing__sync"> Updating model availability…</span>
-              </Show>
-            </p>
-          </div>
-          <div class="models-routing__modes" role="group" aria-label="Model access mode" aria-describedby={description}>
-            <For each={MODES}>
-              {(option) => {
-                const disabled = () =>
-                  state.saving ||
-                  (option.value === "managed" && (state.account !== "ready" || !canSelectManaged(state.wallet)))
-                return (
-                  <div class="models-routing__mode" data-selected={state.mode === option.value ? "true" : undefined}>
-                    <button
-                      type="button"
-                      aria-pressed={state.mode === option.value}
-                      aria-busy={state.saving}
-                      disabled={disabled()}
-                      class="models-routing__option"
-                      title={
-                        option.value === "managed" && managedUnavailable()
-                          ? "Sign in, add purchased Wallet funds, or turn on Ace to use managed models"
-                          : undefined
-                      }
-                      onClick={() => update(option.value)}
-                    >
-                      {option.title}
-                    </button>
-                    <span class="models-routing__consequence" data-disabled={disabled() ? "true" : undefined}>
-                      {option.value === "managed" && managedUnavailable()
-                        ? "Sign in, fund the Wallet or turn on Ace to choose this."
-                        : option.body}
-                    </span>
-                  </div>
-                )
-              }}
-            </For>
-          </div>
+      {/* Which route wins when both a key and Ace could serve a model. */}
+      <div class="settings-row settings-preference-row models-routing__preference">
+        <div class="settings-row-copy">
+          <strong>Preferred model access</strong>
+          <span id={description} class="models-routing__description" aria-live="polite">
+            <Show when={state.saving} fallback="Which route a model uses when both could serve it.">
+              Saving {selected().title}…
+            </Show>
+            <Show when={!state.saving && state.refreshing}>
+              <span class="models-routing__sync"> Updating model availability…</span>
+            </Show>
+          </span>
+          <span class="models-routing__consequence">
+            {selected().value === "managed" && managedUnavailable()
+              ? "Sign in, fund the Wallet or turn on Ace to choose this."
+              : selected().body}
+          </span>
+        </div>
+        <div
+          class="settings-preference-row__actions settings-segmented-control models-routing__modes"
+          role="group"
+          aria-label="Model access mode"
+          aria-describedby={description}
+        >
+          <For each={MODES}>
+            {(option) => {
+              const disabled = () =>
+                state.saving ||
+                (option.value === "managed" && (state.account !== "ready" || !canSelectManaged(state.wallet)))
+              return (
+                <button
+                  type="button"
+                  aria-pressed={state.mode === option.value}
+                  aria-busy={state.saving}
+                  disabled={disabled()}
+                  class="settings-segmented-control__option models-routing__option"
+                  data-selected={state.mode === option.value ? "true" : undefined}
+                  title={
+                    option.value === "managed" && managedUnavailable()
+                      ? "Sign in, add purchased Wallet funds, or turn on Ace to use managed models"
+                      : undefined
+                  }
+                  onClick={() => update(option.value)}
+                >
+                  {option.title}
+                </button>
+              )
+            }}
+          </For>
         </div>
       </div>
     </div>

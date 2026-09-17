@@ -10,6 +10,25 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
+- **Settings, redesigned.** The dialog follows one grammar on every page:
+  a title with a single quiet line, small muted section labels, bordered
+  cards whose rows are divided by hairlines, copy on the left and one control
+  on the right. Status is plain text (no pills or dots), logos and glyphs sit
+  flat at one size, and every row action is the same small button. The rail
+  reads as spaced groups without labels, ends in your account, and opens on
+  General.
+- **Ace has its own page.** Account (sign-in, workspace credentials, funding
+  workspace) and Model access (Ace, Wallet, auto-reload, authorization terms,
+  preferred model access) moved out of General and Models into **Ace**, laid
+  out as rows. Data & privacy moved to the end of Permissions.
+- **Network approves everything by default.** A fresh install reaches the web
+  without a domain gate, with every curated service group already on so the
+  gate starts from the full catalog if it is turned on later.
+- **New icon set.** Lucide replaces Iconoir across the app: even 1.5px strokes
+  on a 24px grid, one glyph per concept in the settings rail.
+
+### Changed
+
 - **Updated website attribution.** The shared footer names InkVell Inc. (dba Synthetic Sciences) and no longer displays the Apache 2.0 link.
 
 - **A clearer OpenScience download page.** Desktop downloads are grouped by platform above the terminal install commands, with a shared footer for product, resource, and privacy links. The homepage workspace preview extends wider while patterned page gutters remain visible at every window size. Smoother spacing, complete mobile install commands, and a continuous sticky header keep the preview and surrounding content from looking clipped.
