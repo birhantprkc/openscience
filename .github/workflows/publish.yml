@@ -245,7 +245,7 @@ jobs:
     name: Sign macOS CLI
     needs: [version, build-cli]
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
     steps:
