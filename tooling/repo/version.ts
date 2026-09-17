@@ -151,6 +151,7 @@ if (!Script.preview) {
       "tooling/repo/npm-release.ts",
       "tooling/repo/prepare-npm.ts",
       "tooling/repo/publish.ts",
+      "tooling/repo/release-assets.ts",
       "tooling/repo/version.ts",
     ])
     const unexpected = changed.filter((file) => !allowed.has(file))
