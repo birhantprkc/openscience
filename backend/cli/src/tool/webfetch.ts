@@ -150,6 +150,67 @@ export function normalizeDownloadOutputPath(args: unknown) {
   return result
 }
 
+/** Inline JSON past this is cut, with the top-level keys named so the next
+ * call can select. */
+const MAX_INLINE_JSON_CHARS = 40_000
+
+/** Read one selection path: dots for keys, [n] for an index, [-1] for the last. */
+export function pick(value: unknown, selector: string): unknown {
+  const steps = selector.match(/[^.[\]]+|\[-?\d+\]/g) ?? []
+  let current: unknown = value
+  for (const step of steps) {
+    if (current === undefined || current === null) return undefined
+    const index = /^\[(-?\d+)\]$/.exec(step)
+    if (index) {
+      if (!Array.isArray(current)) return undefined
+      const at = Number(index[1])
+      current = current[at < 0 ? current.length + at : at]
+      continue
+    }
+    if (typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[step]
+  }
+  return current
+}
+
+export function shapeJson(content: string, select: string[] | undefined) {
+  const parsed = (() => {
+    try {
+      return { value: JSON.parse(content) as unknown }
+    } catch {
+      return undefined
+    }
+  })()
+  if (!parsed) return undefined
+  if (select?.length) {
+    const picked = Object.fromEntries(select.map((selector) => [selector, pick(parsed.value, selector)]))
+    const missing = select.filter((selector) => picked[selector] === undefined)
+    const output = JSON.stringify(picked, null, 2)
+    const note = `selected ${select.length} path${select.length === 1 ? "" : "s"} from ${content.length.toLocaleString()} characters${
+      missing.length ? `; not found: ${missing.join(", ")}` : ""
+    }`
+    return {
+      output:
+        output.length > MAX_INLINE_JSON_CHARS
+          ? `${output.slice(0, MAX_INLINE_JSON_CHARS)}\n\n(Selection truncated at ${MAX_INLINE_JSON_CHARS.toLocaleString()} characters; select narrower paths.)`
+          : output,
+      note,
+    }
+  }
+  if (content.length <= MAX_INLINE_JSON_CHARS) return undefined
+  const keys =
+    parsed.value && typeof parsed.value === "object" && !Array.isArray(parsed.value)
+      ? Object.keys(parsed.value as Record<string, unknown>)
+      : []
+  const shape = Array.isArray(parsed.value)
+    ? `an array of ${parsed.value.length}`
+    : `an object with keys ${keys.join(", ")}`
+  return {
+    output: `${content.slice(0, MAX_INLINE_JSON_CHARS)}\n\n(JSON truncated at ${MAX_INLINE_JSON_CHARS.toLocaleString()} of ${content.length.toLocaleString()} characters; the document is ${shape}. Call again with select, e.g. ["info.version"], to keep only the paths you need.)`,
+    note: `truncated ${content.length.toLocaleString()} characters; ${shape}`,
+  }
+}
+
 const parameters = z
   .object({
     url: z.string().describe("The URL to fetch content from"),
@@ -164,6 +225,13 @@ const parameters = z
       .positive()
       .describe("Optional timeout in seconds (max 120 for text, 1800 for explicit or automatically detected downloads)")
       .optional(),
+    select: z
+      .array(z.string().trim().min(1).max(200))
+      .max(20)
+      .optional()
+      .describe(
+        'For JSON responses: paths to keep, e.g. ["info.version", "info.requires_python", "releases[-1]"]; the rest of the document is dropped. Use it on registry and API responses, which are often megabytes.',
+      ),
     output_path: z
       .string()
       .min(1)
@@ -434,6 +502,15 @@ export const WebFetchTool = Tool.define("webfetch", {
       const content = decodeBody(body, contentType, mime)
 
       const title = `${params.url} (${contentType})`
+
+      // A registry or API answer is a document, and a large one: PyPI returns
+      // megabytes of release metadata for a version number. Selected paths
+      // keep what was asked for; an unselected JSON body past the inline cap
+      // is cut with the paths that would have kept it small.
+      if (mime === "application/json" || /^application\/[\w.+-]*\+json$/.test(mime) || params.select?.length) {
+        const shaped = shapeJson(content, params.select)
+        if (shaped) return { output: shaped.output, title, metadata: { ...responseMetadata, json: shaped.note } }
+      }
 
       // Handle content based on requested format and actual content type
       switch (params.format) {

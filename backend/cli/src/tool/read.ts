@@ -11,6 +11,22 @@ import { assertExternalDirectory, isAuthorizedPath, sessionToolDirectory } from 
 import { InstructionPrompt } from "../session/instruction"
 import { readImageDimensions } from "../util/image"
 import { SafeFileIO } from "@/file/safe-io"
+import { Literature } from "../research/literature"
+
+const MAX_PDF_TEXT_CHARS = 24_000
+
+/** The document's text for the result body: page-marked, bounded, or nothing
+ * when no extractor is installed or extraction fails. */
+async function pdfText(filepath: string, signal?: AbortSignal) {
+  const extracted = await Literature.extract(filepath, signal).catch(() => undefined)
+  if (!extracted || !extracted.pages.length) return undefined
+  const marked = extracted.pages.map((page, index) => `--- page ${index + 1} ---\n${page}`).join("\n\n")
+  const truncated = marked.length > MAX_PDF_TEXT_CHARS
+  const body = truncated
+    ? `${marked.slice(0, MAX_PDF_TEXT_CHARS)}\n\n(Text truncated at ${MAX_PDF_TEXT_CHARS.toLocaleString()} characters of ${marked.length.toLocaleString()}. Use \`literature read\` with a query for passages from the rest.)`
+    : marked
+  return { pages: extracted.pages.length, chars: extracted.chars, tool: extracted.tool, body, truncated }
+}
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
@@ -208,8 +224,8 @@ export const ReadTool = Tool.define("read", {
       const instructions = await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
       const mime = file.type
       const fileBytes = snapshot.bytes
+      const dims = isImage ? readImageDimensions(fileBytes) : undefined
       if (isImage) {
-        const dims = readImageDimensions(fileBytes)
         if (usesAnthropicImageLimit(ctx) && dims && Math.max(dims.width, dims.height) > MAX_IMAGE_DIMENSION) {
           throw new Error(
             `Image too large to attach (${dims.width}x${dims.height}). ` +
@@ -219,13 +235,37 @@ export const ReadTool = Tool.define("read", {
           )
         }
       }
-      const msg = `${kind} read successfully`
+      // A PDF attachment is only as readable as the model behind the route
+      // makes it, and several routes take no PDFs at all: the text goes into
+      // the result beside the attachment when this machine can extract it,
+      // with the pages counted, so the reader is never left to guess whether
+      // the document arrived.
+      const text = isPdf ? await pdfText(filepath, ctx.abort) : undefined
+      const msg = isPdf
+        ? text
+          ? `PDF read successfully: ${text.pages} page${text.pages === 1 ? "" : "s"}, ${text.chars.toLocaleString()} characters of text extracted with ${text.tool}.`
+          : "PDF attached. No text was extracted: no PDF text extractor is installed (pdftotext from poppler, or PyMuPDF via `pip install pymupdf`). Use `literature read` on the file for passages by query once one is installed."
+        : dims
+          ? `Image read successfully: ${dims.width}×${dims.height} ${mime.replace("image/", "").toUpperCase()}, ${Math.max(1, Math.round(fileBytes.byteLength / 1024))} KB.`
+          : `${kind} read successfully`
       return {
         title,
-        output: msg,
+        output: text ? `${msg}\n\n${text.body}` : msg,
         metadata: {
           preview: msg,
-          truncated: false,
+          truncated: text?.truncated ?? false,
+          ...(text ? { pages: text.pages } : {}),
+          // What was looked at, for the trace: a schematic review that says
+          // "10/10" can be checked against the file it judged.
+          ...(isImage
+            ? {
+                image: {
+                  mime,
+                  bytes: fileBytes.byteLength,
+                  ...(dims ? { width: dims.width, height: dims.height } : {}),
+                },
+              }
+            : {}),
           ...(instructions.length > 0 && { loaded: instructions.map((i) => i.filepath) }),
         },
         attachments: [

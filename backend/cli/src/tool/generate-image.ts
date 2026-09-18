@@ -11,7 +11,11 @@ import { File } from "@/file"
 import { FileWatcher } from "@/file/watcher"
 import { Network } from "@/settings/network"
 import { ImageRoute } from "./image-route"
+import { OpenScience } from "@/openscience"
 
+/** What one image render can cost on Ace at the largest size, in cents: the
+ * floor below which a render is refused before it is requested. */
+const RENDER_FLOOR_CENTS = 50
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024
 const MAX_IMAGE_RESPONSE_BYTES = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024 * 1024
 const MAX_IMAGE_ERROR_BYTES = 1024 * 1024
@@ -519,6 +523,21 @@ export const GenerateImageTool = Tool.define("generate_image", {
       )
     }
 
+    // A render on Ace is paid from the Wallet. Three schematics once ran
+    // their 1K drafts and then failed at their 2K finals as the balance ran
+    // out mid-workflow; the check happens before the request, and the
+    // balance travels with the result so the next render can be planned.
+    const wallet =
+      route.kind === "ace"
+        ? await OpenScience.getCredits(undefined, { lifetimeSpent: false, timeoutMs: 4_000 }).catch(() => null)
+        : null
+    const available = wallet?.availableCents ?? wallet?.spendableBalanceCents
+    if (route.kind === "ace" && available !== undefined && available !== null && available < RENDER_FLOOR_CENTS) {
+      throw new Error(
+        `Your Ace Wallet has $${(available / 100).toFixed(2)} available, below the $${(RENDER_FLOOR_CENTS / 100).toFixed(2)} an image render can cost. Nothing was generated. Add funds in Customize → Ace and retry, or connect your own Gemini or OpenAI key for image generation.`,
+      )
+    }
+
     await ctx.ask({
       permission: "generate_image",
       patterns: [route.model],
@@ -688,9 +707,20 @@ export const GenerateImageTool = Tool.define("generate_image", {
     const shown = [Instance.worktree, directory]
       .map((root) => path.relative(root, output))
       .find((rel) => rel && !rel.startsWith(".."))
+    const after =
+      route.kind === "ace"
+        ? await OpenScience.getCredits(undefined, { lifetimeSpent: false, timeoutMs: 4_000 }).catch(() => null)
+        : null
+    const left = after?.availableCents ?? after?.spendableBalanceCents
     return {
       title: shown ?? path.basename(output),
-      output: `Generated ${path.basename(output)} with ${route.model} via ${route.label}.`,
+      output: `Generated ${path.basename(output)} with ${route.model} via ${route.label}.${
+        left !== undefined && left !== null
+          ? ` Wallet available after this render: $${(left / 100).toFixed(2)}${
+              left < 3 * RENDER_FLOOR_CENTS ? " (plan remaining renders against this before starting them)" : ""
+            }.`
+          : ""
+      }`,
       metadata: {
         filepath: output,
         mime: image.mime,

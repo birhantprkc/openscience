@@ -317,7 +317,22 @@ export const LiteratureTool = Tool.define("literature", {
     const body = (() => {
       if (params.query) {
         const found = Literature.passages(pages, params.query)
-        if (!found.length) return { text: `No passage matches "${params.query}".`, note: undefined }
+        // A query that matches nothing in a paper that did arrive should not
+        // send the reader off to fetch it again another way: the document's
+        // outline (its headings by page) says what is there to ask for.
+        if (!found.length) {
+          const outline = Literature.outline(pages)
+          return {
+            text: [
+              `No passage matches "${params.query}" in the ${pages.length}-page text (${chars.toLocaleString()} characters extracted).`,
+              outline.length
+                ? `Sections found:\n${outline.map((item) => `[p.${item.page}] ${item.heading}`).join("\n")}`
+                : "No section headings were recognised.",
+              "Try other terms from these sections, or read by pages.",
+            ].join("\n\n"),
+            note: "outline, no passage matched",
+          }
+        }
         const text = found.map((f) => `[p.${f.page}] ${f.text}`).join("\n\n")
         return { text, note: `${found.length} passage(s) matching "${params.query}"` }
       }

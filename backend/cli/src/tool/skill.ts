@@ -253,6 +253,39 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
       content = resolveSkillPaths(content, siblings)
       content = await ComputePrompt.skill(skill.name, content)
 
+      const contentHash = createHash("sha256").update(content).digest("hex")
+      // The same skill loaded twice in one turn (a session that runs for a day
+      // reaches for /autoresearch again) put the whole document in the
+      // context a second time. When the earlier load is still in the
+      // transcript with the same bytes, a receipt names it instead.
+      const earlier = ctx.messages
+        .flatMap((message) => message.parts)
+        .find(
+          (part) =>
+            part.type === "tool" &&
+            part.tool === "skill" &&
+            part.state.status === "completed" &&
+            !part.state.time.compacted &&
+            (part.state.metadata as { name?: string; contentHash?: string } | undefined)?.name === skill.name &&
+            (part.state.metadata as { contentHash?: string } | undefined)?.contentHash === contentHash,
+        )
+      if (earlier) {
+        return {
+          title: `Skill already loaded: ${skill.name}`,
+          output: `## Skill: ${skill.name}\n\nAlready loaded in this conversation with the same content (${content.length.toLocaleString()} characters; base directory ${dir}). Its instructions are in the earlier skill result above and still apply; they are not repeated here.`,
+          metadata: {
+            name: skill.name,
+            origin: skill.origin,
+            contentHash,
+            alreadyLoaded: true,
+            ...(skill.capability ? { capability: skill.capability } : {}),
+            ...(skill.allowed_tools?.length ? { allowedTools: skill.allowed_tools } : {}),
+            dir,
+            matches: [],
+          },
+        }
+      }
+
       // Format output similar to plugin pattern
       const output = [`## Skill: ${skill.name}`, "", `**Base directory**: ${dir}`, "", content].join("\n")
 
@@ -262,7 +295,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         metadata: {
           name: skill.name,
           origin: skill.origin,
-          contentHash: createHash("sha256").update(content).digest("hex"),
+          contentHash,
           ...(skill.capability ? { capability: skill.capability } : {}),
           ...(skill.allowed_tools?.length ? { allowedTools: skill.allowed_tools } : {}),
           dir,

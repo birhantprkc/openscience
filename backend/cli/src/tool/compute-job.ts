@@ -670,10 +670,23 @@ async function selected(id: string, sessionID: string, base?: JobBroker.Options)
 
 function artifacts(job: JobBroker.Job) {
   const files = [...(job.artifacts ?? []), ...(job.checkpoint ? [job.checkpoint] : [])]
+  // Delivered paths are relative to the job's working directory, which for
+  // an isolated session is scratch that dies with the conversation. Say
+  // where that is and how to keep what matters, so the outputs are not
+  // hunted for with globs and then left where they will be deleted.
+  const root = job.cwd
+  const inProject = !!root && Filesystem.contains(Instance.directory, root)
   return {
     job: summary(job),
     expected: [...(job.artifact_patterns ?? []), ...(job.checkpoint_path ? [job.checkpoint_path] : [])],
     delivered: files.filter((file, index) => files.findIndex((item) => item.path === file.path) === index),
+    delivered_root: root,
+    delivered_in: root ? (inProject ? "project files" : "session scratch") : undefined,
+    keep: root
+      ? inProject
+        ? "These paths are under Project files and persist."
+        : `These paths are relative to ${root}, session scratch that is deleted with the conversation. Keep results with the artifact tool (Results) or copy them into Project files with bash.`
+      : undefined,
     capture_error: job.capture_error,
   }
 }

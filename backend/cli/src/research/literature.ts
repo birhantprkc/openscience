@@ -490,6 +490,27 @@ export namespace Literature {
     return { pages, chars: pages.reduce((sum, page) => sum + page.length, 0), tool }
   }
 
+  /** The headings a paper's text reveals, by page: numbered sections and the
+   * usual unnumbered ones (Abstract, Methods, Results, Discussion,
+   * References), so a reader whose query missed can see what is there. */
+  export function outline(pages: string[], limit = 40): Array<{ page: number; heading: string }> {
+    const standard =
+      /^(?:abstract|introduction|background|related work|methods?|materials and methods|experimental setup|experiments?|results?|results and discussion|discussion|conclusions?|limitations|acknowledg(?:e)?ments|references|appendix(?:\s+[A-Z])?|supplementary(?: material)?)\b/i
+    const numbered = /^(?:\d+(?:\.\d+){0,2}\.?|[IVX]+\.)\s+[A-Z][^\n]{2,80}$/
+    const found: Array<{ page: number; heading: string }> = []
+    pages.forEach((text, index) => {
+      for (const raw of text.split("\n")) {
+        const line = raw.trim()
+        if (!line || line.length > 90) continue
+        if (!(numbered.test(line) || (standard.test(line) && line.length < 60))) continue
+        if (found.some((item) => item.heading === line)) continue
+        found.push({ page: index + 1, heading: line })
+        if (found.length >= limit) return
+      }
+    })
+    return found
+  }
+
   /** Page-addressed passages matching a query: exact phrase first, then all terms within a window. */
   export function passages(pages: string[], query: string, opts: { limit?: number; width?: number } = {}) {
     const limit = opts.limit ?? 8

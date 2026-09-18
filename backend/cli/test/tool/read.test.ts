@@ -431,7 +431,8 @@ describe("tool.read truncation", () => {
           { ...ctx, extra: { model: { providerID: "openrouter", id: "openai/gpt-5.6-sol" } } },
         )
         expect(result.attachments).toHaveLength(1)
-        expect(result.output).toBe("Image read successfully")
+        expect(result.output).toBe("Image read successfully: 2560×1422 PNG, 2625 KB.")
+        expect(result.metadata).toMatchObject({ image: { mime: "image/png", width: 2560, height: 1422 } })
       },
     })
   })
