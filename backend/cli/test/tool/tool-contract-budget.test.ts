@@ -23,14 +23,14 @@ test("keeps the research tool contract within its model context budget", async (
 
       expect(bytes).toBeLessThanOrEqual(50_000)
       expect(contracts.bash).toBeLessThanOrEqual(2_150)
-      expect(contracts.compute_job).toBeLessThanOrEqual(4_000)
+      expect(contracts.compute_job).toBeLessThanOrEqual(4_100)
       expect(contracts.python).toBeLessThanOrEqual(2_100)
       expect(contracts.skill).toBeLessThanOrEqual(1_800)
       // Seven listed workers (the general worker joined the six) and the
       // full-path rule for briefs.
       expect(contracts.task).toBeLessThanOrEqual(3_200)
       expect(contracts.todowrite).toBeLessThanOrEqual(1_750)
-      expect(contracts.webfetch).toBeLessThanOrEqual(2_500)
+      expect(contracts.webfetch).toBeLessThanOrEqual(2_700)
     },
   })
 })

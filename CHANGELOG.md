@@ -11,6 +11,83 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 ### Changed
 
 - **Direct hosting for Ace OpenAI and Google models.** GPT-6 Astra, GPT-5.6 Sol/Terra/Luna, and graph embeddings use Azure. Gemini chat and Nano Banana Pro use Google's Gemini API. The gateway preserves existing model selections and applies the provider token rates plus the existing funding fee. Rates identify the host; Fast is unavailable on these routes. Nano Banana returns PNG. Direct API-key and ChatGPT connections remain available.
+- **Compute approvals are bounded by time, not bound to one plan.** A Modal
+  job used to ask on the SHA-256 of its exact plan, so "this session", "this
+  project" and "always" each stored a grant nothing could match again and the
+  next job, a different script, asked afresh; one waited overnight for its
+  answer. A job now asks under a time allowance when you granted one and its
+  timeout still fits beside the job time already dispatched there; otherwise
+  it asks on its exact plan and offers an allowance beside it (four times the
+  job, in whole hours, one to eight). Approving a study also grants an
+  allowance equal to its hour budget for the refit and baselines that follow
+  its runs. Full access asks once per allowance. The Permissions page names
+  what each standing approval covers.
+- **One request card.** Approvals came in three layouts and questions in a
+  fourth. Every request now has the same shape: the kind as an eyebrow, the
+  decision in one line, the facts you judge it by in one quiet line, the full
+  plan behind **Details**, and Deny · Allow… · Allow once in the same order.
+  A Modal card's scopes say what each adds; a study card keeps **Approve
+  study** and gains a project scope; a hosted scientific request stays
+  one-time.
+- **Quieter errors.** A failed turn or tool keeps the neutral surface with a
+  thin critical accent instead of a filled red box; the retry line leads with
+  its state ("retrying (2) in 12s") and shortens the reason to one sentence,
+  with the full text in the tooltip; the gateway's router code closes its
+  message as a detail rather than interrupting the sentence.
+- **Background workers are visible.** While a worker dispatched in the
+  background is still running, the composer says so and that its report will
+  start a new turn; the model is told to say the same when it ends a response.
+- **`study reopen`.** A concluded, halted or paused study continues under the
+  additional budget you agree to, with its runs, ideas, lessons and best run
+  intact, instead of a second study that starts from nothing.
+- **Large inputs by name.** The 100 MiB Modal staging limit now applies to
+  what a glob or the default sweep picks up; a file named by its exact path
+  (a checkpoint, a dataset) may be up to 2 GiB, 4 GiB in all, and the approval
+  card lists it with its size and hash.
+- **Tools that say more.** `compute_job artifacts` names the root its
+  delivered paths are relative to and whether it is scratch or Project files;
+  an interrupted `compute_job wait` says the job keeps running rather than
+  "Tool execution aborted"; `generate_image` on Ace checks the Wallet before a
+  render and reports the balance after; `read` returns a PDF's extracted text
+  beside the attachment and an image's dimensions; `skill` answers a repeat
+  load with a receipt; `webfetch` takes `select` paths for JSON and cuts an
+  unselected document past 40k characters; `literature read` answers a query
+  that matched nothing with the paper's section outline.
+- **Study updates repeat their rules once.** The state travels whenever it
+  changes; the loop's instructions once per study. The review gate names a
+  worker that exists.
+
+### Fixed
+
+- **The deliverables checklist stays anchored to your first request.** Every
+  prompt carries an internal marker, so the anchor that filtered on it never
+  saw an earlier message, and a background worker's report (arriving as a
+  synthetic prompt) could define the checklist: fourteen paths it had
+  audited, a shell variable and elided `...` prefixes among them, followed by
+  two rounds of "produce the real file" and copies of sealed test labels in
+  scratch. Synthetic parts never specify deliverables, and an abbreviated path
+  is not a file.
+- **A dispatch that dies before the command runs hands the idea back.** Two
+  study starts seconds apart rewrote the tracking SDK in the shared root; the
+  first run's Modal dispatch compared the file's size against its approval
+  mid-rewrite, failed, and the one-run-per-idea rule consumed the idea. The
+  SDK is left alone when its bytes match and otherwise appears whole; a job
+  that fails in staging, approval drift or upload before its command ran
+  returns the idea to the queue and stays outside the run budget.
+- **Streaming no longer duplicates code blocks.** The copy button's frame was
+  added to the live DOM after each render while the next parse arrived bare,
+  and the frame was protected from discard, so every streamed update past a
+  code block left one more stale copy (a 14k-character answer with three
+  one-line blocks ended with fifty). The parsed side is framed first.
+- **A prune inside the cache window clears only the shortfall.** The loop's
+  capacity checks pruned every old result while the provider's prefix was
+  warm, re-reading 143k tokens to reclaim 70k; they now clear what the budget
+  needs, newest-eligible first.
+
+## v2.0.115 – v2.0.119 — 2026-09-17
+
+### Changed
+
 - **Simplified download page.** Removed the "Build with OpenScience" integrations section from openscience.sh/download.
 - **Model access, rebuilt.** The Ace page's Model access card is five rows
   with one control each: Ace (state and Manage), Wallet (available amount and

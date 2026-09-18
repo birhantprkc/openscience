@@ -229,9 +229,7 @@ const parameters = z
       .array(z.string().trim().min(1).max(200))
       .max(20)
       .optional()
-      .describe(
-        'For JSON responses: paths to keep, e.g. ["info.version", "info.requires_python", "releases[-1]"]; the rest of the document is dropped. Use it on registry and API responses, which are often megabytes.',
-      ),
+      .describe('JSON only: paths to keep, e.g. ["info.version", "urls[-1].filename"]; the rest is dropped.'),
     output_path: z
       .string()
       .min(1)
