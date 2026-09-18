@@ -292,24 +292,29 @@ function setCopyState(button: HTMLButtonElement, labels: CopyLabels, copied: boo
   button.setAttribute("title", labels.copy)
 }
 
+/** Give every bare code block its frame and copy button. This runs on the
+ * parsed HTML before reconciliation, so the live DOM and the next render share
+ * one structure: when only the live side carried the frame, morphdom could not
+ * match a framed block to a bare one and, with the frame protected from
+ * discard, every streamed update left one more stale copy behind. */
+export function wrapCodeBlocks(root: ParentNode, labels: CopyLabels) {
+  for (const block of Array.from(root.querySelectorAll("pre"))) {
+    const parent = block.parentElement
+    if (!parent || parent.getAttribute("data-component") === "markdown-code") continue
+    const wrapper = document.createElement("div")
+    wrapper.setAttribute("data-component", "markdown-code")
+    parent.replaceChild(wrapper, block)
+    wrapper.appendChild(block)
+    wrapper.appendChild(createCopyButton(labels))
+  }
+}
+
 function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
   const timeouts = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>()
 
   const updateLabel = (button: HTMLButtonElement) => {
     const copied = button.getAttribute("data-copied") === "true"
     setCopyState(button, labels, copied)
-  }
-
-  const ensureWrapper = (block: HTMLPreElement) => {
-    const parent = block.parentElement
-    if (!parent) return
-    const wrapped = parent.getAttribute("data-component") === "markdown-code"
-    if (wrapped) return
-    const wrapper = document.createElement("div")
-    wrapper.setAttribute("data-component", "markdown-code")
-    parent.replaceChild(wrapper, block)
-    wrapper.appendChild(block)
-    wrapper.appendChild(createCopyButton(labels))
   }
 
   const handleClick = async (event: MouseEvent) => {
@@ -330,10 +335,7 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     timeouts.set(button, timeout)
   }
 
-  const blocks = Array.from(root.querySelectorAll("pre"))
-  for (const block of blocks) {
-    ensureWrapper(block)
-  }
+  wrapCodeBlocks(root, labels)
 
   const buttons = Array.from(root.querySelectorAll('[data-slot="markdown-copy-button"]'))
   for (const button of buttons) {
@@ -348,6 +350,29 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
       clearTimeout(timeout)
     }
   }
+}
+
+/** Bring the live container to the parsed HTML. Code blocks are framed on
+ * the parsed side first, and a framed block updates only its `pre`, so the
+ * copy button and its state survive a streamed re-render. */
+export function reconcileMarkdown(container: HTMLElement, next: HTMLElement, labels: CopyLabels) {
+  wrapCodeBlocks(next, labels)
+  morphdom(container, next, {
+    childrenOnly: true,
+    onBeforeElUpdated: (fromEl, toEl) => {
+      if (fromEl.isEqualNode(toEl)) return false
+      if (
+        fromEl.getAttribute("data-component") === "markdown-code" &&
+        toEl.getAttribute("data-component") === "markdown-code"
+      ) {
+        const fromPre = fromEl.querySelector("pre")
+        const toPre = toEl.querySelector("pre")
+        if (fromPre && toPre && !fromPre.isEqualNode(toPre)) morphdom(fromPre, toPre)
+        return false
+      }
+      return true
+    },
+  })
 }
 
 function touch(key: string, value: Entry) {
@@ -466,27 +491,9 @@ export function Markdown(
       )
     }
 
-    morphdom(container, temp, {
-      childrenOnly: true,
-      onBeforeElUpdated: (fromEl, toEl) => {
-        if (fromEl.isEqualNode(toEl)) return false
-        if (fromEl.getAttribute("data-component") === "markdown-code") {
-          const fromPre = fromEl.querySelector("pre")
-          const toPre = toEl.querySelector("pre")
-          if (fromPre && toPre && !fromPre.isEqualNode(toPre)) {
-            morphdom(fromPre, toPre)
-          }
-          return false
-        }
-        return true
-      },
-      onBeforeNodeDiscarded: (node) => {
-        if (node instanceof Element) {
-          if (node.getAttribute("data-slot") === "markdown-copy-button") return false
-          if (node.getAttribute("data-component") === "markdown-code") return false
-        }
-        return true
-      },
+    reconcileMarkdown(container, temp, {
+      copy: i18n.t("ui.message.copy"),
+      copied: i18n.t("ui.message.copied"),
     })
 
     if (fileCleanup) {
