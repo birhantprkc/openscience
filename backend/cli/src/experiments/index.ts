@@ -702,9 +702,10 @@ export namespace Experiments {
     database.query(`UPDATE run SET headline = ?, baseline_delta = ? WHERE id = ?`).run(headline, delta, runID)
   }
 
-  /** A run that never reached a job: it counts for nothing in a budget. */
+  /** A run whose command never ran — no job was bound, or the job died in
+   * staging before execution: it counts for nothing in a budget. */
   export function dispatchFailed(run: Run) {
-    return run.status === "failed" && !run.jobID && (run.killReason?.startsWith("dispatch") ?? false)
+    return run.status === "failed" && (run.killReason?.startsWith("dispatch") ?? false)
   }
 
   /** Whether a run counts against the study's run budget. The budget bounds

@@ -190,6 +190,16 @@ export namespace StudyDriver {
 
   const terminal = new Set(["succeeded", "failed", "cancelled", "interrupted"])
 
+  /** The errors a dispatch raises before the command runs: the staging
+   * manifest, the approval's file hashes, the upload itself. Anything the
+   * command printed is a result and is judged as one. */
+  const DISPATCH_ERROR =
+    /\b(?:input changed (?:after approval|during secure access|or escaped the project)|exceeds? the \d+ MiB approval limit|exceed the \d+-file approval limit|before upload|staging input|upload(?:ing|ed)? (?:failed|rejected))\b/i
+
+  export function dispatchError(error: string | undefined) {
+    return !!error && DISPATCH_ERROR.test(error)
+  }
+
   function status(job: JobBroker.Job, run: Experiments.Run): Exclude<Experiments.RunStatus, "running"> {
     if (run.killReason) return "killed"
     if (job.status === "succeeded") return "finished"
@@ -277,6 +287,26 @@ export namespace StudyDriver {
         }
         if (!terminal.has(info.status)) continue
         await follower.poll().catch(() => undefined)
+        // A job that died before its command ran (an upload rejected at the
+        // staging limit, an input whose size drifted from its approval) has
+        // evaluated nothing: the idea goes back to the queue with the reason,
+        // rather than being spent on infrastructure. The run stays in the
+        // record as a dispatch failure, outside the run budget.
+        if (info.status === "failed" && !info.started_at && info.exit_code == null && dispatchError(info.error)) {
+          const failed = await Experiments.finishRun(fresh.id, "failed", {
+            killReason: `dispatch failed: ${info.error}`,
+          })
+          current.followers.delete(fresh.id)
+          if (!failed) continue
+          if (failed.ideaID) await Experiments.updateIdea(failed.ideaID, { status: "queued", runID: undefined })
+          await Experiments.addEvent(study.id, "failed", `${failed.name} failed before it ran: ${info.error}`, {
+            runID: failed.id,
+          })
+          current.pending.push(
+            `Run "${failed.name}" (${failed.id}) failed before its command ran: ${info.error}. The idea is back in the queue and this did not count as its run or against the budget; fix the cause named above if it is yours (a file over the upload limit, an input edited while a dispatch was in flight) and start it again with study start.`,
+          )
+          continue
+        }
         const settled = await Experiments.finishRun(fresh.id, status(info, fresh), {
           killReason: info.status === "failed" || info.status === "interrupted" ? info.error : undefined,
         })

@@ -11,6 +11,35 @@ const python = Bun.which("python3") ?? Bun.which("python")
 
 afterEach(() => Experiments.close())
 
+describe("tracking SDK files", () => {
+  test("a second materialize leaves matching files untouched and replaces a differing one whole", async () => {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "openscience-track-"))
+    try {
+      await TrackingSDK.materialize(workspace, { shim: true })
+      const file = path.join(workspace, TrackingSDK.DIRECTORY, "openscience_track", "__init__.py")
+      const before = await fs.stat(file)
+      // Two study starts seconds apart: the second must not truncate what the
+      // first run's dispatch is about to upload.
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      await TrackingSDK.materialize(workspace, { shim: true })
+      const after = await fs.stat(file)
+      expect(after.ino).toBe(before.ino)
+      expect(after.mtimeMs).toBe(before.mtimeMs)
+      // A stale or hand-edited copy is replaced by a rename, never rewritten in place.
+      await fs.writeFile(file, "print('old')")
+      const stale = await fs.stat(file)
+      await TrackingSDK.materialize(workspace, { shim: true })
+      expect(await fs.readFile(file, "utf8")).toBe(TrackingSDK.PYTHON)
+      expect((await fs.stat(file)).ino).not.toBe(stale.ino)
+      expect((await fs.readdir(path.join(workspace, TrackingSDK.DIRECTORY, "openscience_track"))).sort()).toEqual([
+        "__init__.py",
+      ])
+    } finally {
+      await fs.rm(workspace, { recursive: true, force: true })
+    }
+  })
+})
+
 describe("tracking SDK over stdout", () => {
   test.skipIf(!python)("a wandb-style script's records land in the store through the job log", async () => {
     const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "openscience-track-"))

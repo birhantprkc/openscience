@@ -1743,6 +1743,7 @@ export namespace SessionPrompt {
       const fresh = [
         ...(status.length ? [{ name: "units", key: status.join("\n"), lines: status }] : []),
         ...(study ? [{ name: "study", key: study.key, lines: [study.text] }] : []),
+        ...(study ? [{ name: "study-rules", key: study.rulesKey, lines: [study.rules] }] : []),
       ].filter((part) => delivered[part.name] !== part.key)
       if (fresh.length) {
         for (const part of fresh) delivered[part.name] = part.key
@@ -3112,7 +3113,9 @@ export namespace SessionPrompt {
   /** The study's state for the model, and the key that says when it is worth
    * saying again. The first sentence is what the transcript shows as the
    * note, so it reads as a status line rather than an identifier. */
-  async function studyReminder(sessionID: string): Promise<{ text: string; key: string } | undefined> {
+  async function studyReminder(
+    sessionID: string,
+  ): Promise<{ text: string; key: string; rules: string; rulesKey: string } | undefined> {
     const study = await Experiments.studyForSession(sessionID).catch(() => undefined)
     if (!study) return
     const overview = await Experiments.overview(study.id).catch(() => undefined)
@@ -3135,7 +3138,11 @@ export namespace SessionPrompt {
       directives: study.directives.filter((directive) => directive.active).map((directive) => directive.text),
       budget: study.budget,
     })
-    const text = [
+    // The state changes as runs land; the rules of the loop do not. The
+    // state travels whenever it changes, the rules once per study (and again
+    // only when they change: a directive added, the review gate passed), so
+    // a study update does not re-send its instruction block every time.
+    const state = [
       `Study "${study.name}" is ${study.status}: ${study.direction} ${study.metric}; baseline ${value(overview.baseline)}; best ${value(overview.best)}; ${running.length} of ${study.concurrency} slots live; ${queued.length} idea${queued.length === 1 ? "" : "s"} queued.`,
       `Study id: ${study.id}.`,
       `Runs completed: ${done.length}. Live: ${running.length}/${study.concurrency}${running.length ? ` (${running.map((run) => run.name).join(", ")})` : ""}. Queued ideas: ${queued.length}${
@@ -3146,12 +3153,15 @@ export namespace SessionPrompt {
               .join("; ")})`
           : ""
       }. Budget: ${budget || "none"}${study.killCriteria ? `. Kill criteria: ${study.killCriteria}` : ""}.`,
+      ...(study.lessons ? [`Lessons so far:\n${study.lessons.split("\n").slice(-6).join("\n")}`] : []),
+    ]
+    const rulesLines = [
       ...(study.review && !overview.baseline
         ? [
-            `Review gate: before the baseline runs, delegate a read-only critique of the training and evaluation code (Task tool, specialist "critique") and fix anything it marks blocking; only then start the baseline.`,
+            `Review gate: before the baseline runs, delegate a read-only critique of the training and evaluation code (Task tool, subagent_type "explore", briefed to look for leakage, evaluation and threshold errors) and fix anything it marks blocking; only then start the baseline.`,
           ]
         : []),
-      `Loop: pick the top queued idea, implement it in the training script, start exactly one run for it with study start, and when a study update reports the run ended, read its numbers with the experiments tool, record the verdict with study record (analysis, lessons), then queue or start the next idea. Keep ${study.concurrency} run${study.concurrency === 1 ? "" : "s"} live while ideas remain. Never re-run an idea that already has a run; propose a new idea instead. Do not ask whether to continue while budget remains; ask only when input or authority is missing. Study updates arrive as user messages that begin "Study update".`,
+      `Loop: pick the top queued idea, implement it in the training script, start exactly one run for it with study start, and when a study update reports the run ended, read its numbers with the experiments tool, record the verdict with study record (analysis, lessons), then queue or start the next idea. Keep ${study.concurrency} run${study.concurrency === 1 ? "" : "s"} live while ideas remain. Never re-run an idea whose run executed; propose a new idea instead. An idea whose dispatch failed before its command ran returns to the queue and may be started again. Do not ask whether to continue while budget remains; ask only when input or authority is missing. Study updates arrive as user messages that begin "Study update".`,
       ...(study.directives.some((directive) => directive.active)
         ? [
             `Standing directives from the user (rules for the rest of the study):\n${study.directives
@@ -3161,9 +3171,9 @@ export namespace SessionPrompt {
           ]
         : []),
       `Keep at least 3 ideas queued, of different kinds; propose in batches. When a run finishes within a few minutes, wait for it in the same turn (compute_job wait) rather than ending the turn.`,
-      ...(study.lessons ? [`Lessons so far:\n${study.lessons.split("\n").slice(-6).join("\n")}`] : []),
-    ].join("\n")
-    return { text, key }
+    ]
+    const rules = rulesLines.join("\n")
+    return { text: state.join("\n"), key, rules, rulesKey: JSON.stringify({ id: study.id, rules }) }
   }
 
   /** The per-step status the harness units report (time used, spend, study

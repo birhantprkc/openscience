@@ -103,6 +103,71 @@ describe("study driver", () => {
     })
   })
 
+  test("a job that failed before its command ran hands the idea back and stays outside the run budget", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const h = harness(tmp.path)
+        const study = await Experiments.createStudy({
+          sessionID: "ses_driver",
+          name: "loop",
+          purpose: "test",
+          metric: "cv_accuracy",
+          direction: "maximize",
+          root: path.join(tmp.path, "study"),
+          concurrency: 2,
+          killCriteria: "",
+          budget: { maxRuns: 1 },
+        })
+        const [idea] = await Experiments.proposeIdeas(study.id, [
+          { title: "One-hot XGBoost reference", description: "d", why: "w", ev: 0.001 },
+        ])
+        const run = await Experiments.createRun({
+          name: "One-hot XGBoost reference",
+          source: "job",
+          studyID: study.id,
+          ideaID: idea!.id,
+          jobID: "job_x",
+          sessionID: "ses_driver",
+        })
+        // The Modal adapter rejected an upload whose size drifted from its
+        // approval; the command never started.
+        h.jobs.set("job_x", {
+          status: "failed",
+          error: "Modal input changed after approval: .openscience/sdk/openscience_track/__init__.py",
+        })
+        await StudyDriver.tick(study.id)
+        const failed = (await Experiments.getRun(run.id))!
+        expect(failed.status).toBe("failed")
+        expect(failed.killReason).toStartWith("dispatch failed:")
+        expect(Experiments.budgeted(failed)).toBe(false)
+        expect((await Experiments.getIdea(idea!.id))?.status).toBe("queued")
+        expect((await Experiments.getIdea(idea!.id))?.runID).toBeUndefined()
+        expect(h.prompts).toHaveLength(1)
+        expect(h.prompts[0]).toContain("failed before its command ran")
+        expect(h.prompts[0]).toContain("back in the queue")
+
+        // A job the command itself failed is a result, judged as one.
+        const [other] = await Experiments.proposeIdeas(study.id, [
+          { title: "blend", description: "d", why: "w", ev: 0 },
+        ])
+        const second = await Experiments.createRun({
+          name: "blend",
+          source: "job",
+          studyID: study.id,
+          ideaID: other!.id,
+          jobID: "job_y",
+          sessionID: "ses_driver",
+        })
+        h.jobs.set("job_y", { status: "failed", error: "Traceback: ModuleNotFoundError: xgboost" })
+        await StudyDriver.tick(study.id)
+        expect((await Experiments.getRun(second.id))?.killReason).toBe("Traceback: ModuleNotFoundError: xgboost")
+        expect((await Experiments.getIdea(other!.id))?.status).not.toBe("queued")
+      },
+    })
+  })
+
   test("applies kill criteria to a live run and reports the reason", async () => {
     await using tmp = await tmpdir()
     await Instance.provide({

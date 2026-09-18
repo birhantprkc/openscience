@@ -264,15 +264,29 @@ def login(*args, **kwargs):
     return True
 `
 
+  /** Put one SDK file in place. Two runs of a study start seconds apart in
+   * the same root, and a Modal dispatch compares each upload's size against
+   * its approval right before uploading: a truncate-and-rewrite of identical
+   * bytes by the second start once failed the first run's dispatch and, with
+   * it, the idea. The file is left alone when its bytes already match, and
+   * otherwise appears whole through a rename. */
+  async function place(file: string, content: string) {
+    const current = await fs.readFile(file, "utf8").catch(() => undefined)
+    if (current === content) return
+    const temp = `${file}.${process.pid}.${Date.now().toString(36)}.tmp`
+    await fs.writeFile(temp, content)
+    await fs.rename(temp, file)
+  }
+
   /** Write the SDK into a workspace and return the PYTHONPATH entries. */
   export async function materialize(workspace: string, options: { shim: boolean }) {
     const root = path.join(workspace, DIRECTORY)
     await fs.mkdir(path.join(root, "openscience_track"), { recursive: true })
-    await fs.writeFile(path.join(root, "openscience_track", "__init__.py"), PYTHON)
+    await place(path.join(root, "openscience_track", "__init__.py"), PYTHON)
     const entries = [DIRECTORY]
     if (options.shim) {
       await fs.mkdir(path.join(root, "shim"), { recursive: true })
-      await fs.writeFile(path.join(root, "shim", "wandb.py"), WANDB_SHIM)
+      await place(path.join(root, "shim", "wandb.py"), WANDB_SHIM)
       entries.push(`${DIRECTORY}/shim`)
     }
     return entries
