@@ -10,6 +10,7 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
+- **Direct hosting for Ace OpenAI and Google models.** GPT-6 Astra, GPT-5.6 Sol/Terra/Luna, and graph embeddings use Azure. Gemini chat and Nano Banana Pro use Google's Gemini API. The gateway preserves existing model selections and applies the provider token rates plus the existing funding fee. Rates identify the host; Fast is unavailable on these routes. Nano Banana returns PNG. Direct API-key and ChatGPT connections remain available.
 - **Simplified download page.** Removed the "Build with OpenScience" integrations section from openscience.sh/download.
 - **Model access, rebuilt.** The Ace page's Model access card is five rows
   with one control each: Ace (state and Manage), Wallet (available amount and

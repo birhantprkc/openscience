@@ -62106,6 +62106,14 @@
                   "openrouter"
                 ]
               },
+              "hosting_provider": {
+                "type": "string",
+                "enum": [
+                  "azure",
+                  "gemini",
+                  "openrouter"
+                ]
+              },
               "funding_fee_bps": {
                 "type": "number"
               },
