@@ -210,8 +210,11 @@ describe("study and experiments tools", () => {
         const remote = asked.filter((item) => item.permission === "modal")
         expect(remote).toHaveLength(1)
         expect(remote[0]!.patterns).toEqual([`study:${active.id}`])
-        expect(remote[0]!.always).toEqual([`study:${active.id}`])
+        // The approval also carries an hour of follow-up Modal time (the
+        // study's hour budget) for the refit and baselines after the runs.
+        expect(remote[0]!.always).toEqual([`study:${active.id}`, "allowance:60"])
         expect(JSON.stringify(remote[0]!.metadata)).toContain("maxRuns")
+        expect(JSON.stringify(remote[0]!.metadata)).toContain('"followUpMinutes":60')
         expect(created.output).toContain("Remote runs approved for this study")
       },
     })

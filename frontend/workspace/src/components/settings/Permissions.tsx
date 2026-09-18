@@ -39,6 +39,38 @@ interface FolderGrant {
   time: { created: number }
 }
 
+/** What a standing approval covers, in the words the card used. A Modal
+ * approval on a 64-hex plan digest covers one exact job and nothing else; an
+ * allowance covers Modal jobs up to a total of job time; a study pattern
+ * covers that study's runs. */
+function approvalTitle(approval: { permission: string; pattern: string }) {
+  if (approval.permission === "modal") {
+    if (/^allowance:\d+$/.test(approval.pattern)) return "Modal jobs"
+    if (approval.pattern.startsWith("study:")) return "Study runs on Modal"
+    if (/^[a-f0-9]{64}$/.test(approval.pattern)) return "One exact Modal job"
+    return "Modal"
+  }
+  if (approval.permission === "environment_mutation") return "One exact environment change"
+  return approval.permission
+}
+
+function approvalDetail(approval: { permission: string; pattern: string }) {
+  if (approval.pattern === "*") return undefined
+  if (approval.permission === "modal") {
+    const allowance = /^allowance:(\d+)$/.exec(approval.pattern)
+    if (allowance) {
+      const minutes = Number(allowance[1])
+      return `up to ${minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`} of job time`
+    }
+    if (approval.pattern.startsWith("study:")) return approval.pattern.slice("study:".length)
+    if (/^[a-f0-9]{64}$/.test(approval.pattern)) return `plan ${approval.pattern.slice(0, 12)}`
+  }
+  if (approval.permission === "environment_mutation" && /^[a-f0-9]{64}$/.test(approval.pattern)) {
+    return `plan ${approval.pattern.slice(0, 12)}`
+  }
+  return approval.pattern
+}
+
 const Permissions: Component = () => {
   const params = useParams()
   const sdk = useGlobalSDK()
@@ -353,9 +385,9 @@ const Permissions: Component = () => {
                           <div class="settings-row settings-preference-row justify-between">
                             <div class="settings-row-copy">
                               <strong class="break-all">
-                                {approval.permission}
-                                <Show when={approval.pattern !== "*"}>
-                                  <span class="text-text-weak font-normal"> · {approval.pattern}</span>
+                                {approvalTitle(approval)}
+                                <Show when={approvalDetail(approval)}>
+                                  {(detail) => <span class="text-text-weak font-normal"> · {detail()}</span>}
                                 </Show>
                               </strong>
                               <span class="text-11-regular text-text-weak">

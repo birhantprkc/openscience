@@ -6,6 +6,7 @@ import type { ComputeCapabilities } from "@/compute/capabilities"
 import { ModalPlan } from "@/compute/modal/plan"
 import { ModalUpload } from "@/compute/modal/upload"
 import { Instance } from "@/project/instance"
+import { ComputeAllowance } from "@/permission/allowance"
 import { SessionFilesystem } from "@/session/filesystem"
 import { Filesystem } from "@/util/filesystem"
 import { Tool } from "./tool"
@@ -323,7 +324,11 @@ type Metadata = {
     job?: JobBroker.Job
     plan?: JobBroker.Plan
   }
-  compute?: JobBroker.Plan & { name: string }
+  compute?: JobBroker.Plan & {
+    name: string
+    /** The time allowance offered beside a Modal job, and the one covering it. */
+    allowance?: { proposed_minutes: number; covered_by?: string; used_minutes?: number }
+  }
   job?: JobBroker.Job
 }
 
@@ -777,18 +782,51 @@ export function createComputeJobTool(base?: JobBroker.Options) {
           }
         }
 
-        ctx.metadata({ title: `Review ${plan.provider} job: ${input.name}`, metadata })
         // A study's runs share the approval its creation asked for; the
         // digest of each dispatched plan is still recorded on the job.
         const scope =
           plan.provider !== "local" && typeof ctx.extra?.studyApproval === "string"
             ? ctx.extra.studyApproval
             : undefined
+        // Outside a study, a Modal job asks under a time allowance the person
+        // granted earlier when its timeout still fits; otherwise it asks on
+        // its exact plan and offers an allowance beside it, so the next job
+        // in the same piece of work does not prompt again.
+        const allowance =
+          plan.provider === "modal" && !scope
+            ? await ComputeAllowance.cover({
+                sessionID: ctx.sessionID,
+                timeoutMinutes: plan.timeout_minutes,
+                jobs: await JobBroker.list(resolved).catch(() => []),
+              })
+            : undefined
+        const proposed =
+          plan.provider === "modal" && !scope ? ComputeAllowance.propose(plan.timeout_minutes) : undefined
+        const approval = {
+          ...metadata,
+          compute: {
+            ...metadata.compute,
+            ...(proposed !== undefined
+              ? {
+                  allowance: {
+                    proposed_minutes: proposed,
+                    ...(allowance ? { covered_by: allowance.pattern, used_minutes: allowance.used } : {}),
+                  },
+                }
+              : {}),
+          },
+        }
+        ctx.metadata({ title: `Review ${plan.provider} job: ${input.name}`, metadata: approval })
         await ctx.ask({
           permission: plan.provider === "modal" ? "modal" : plan.provider === "ssh" ? "remote_compute" : "compute_job",
-          patterns: [scope ?? plan.digest],
-          always: plan.provider === "local" ? [] : [scope ?? plan.digest],
-          metadata,
+          patterns: [scope ?? allowance?.pattern ?? plan.digest],
+          always:
+            plan.provider === "local"
+              ? []
+              : scope
+                ? [scope]
+                : [plan.digest, ...(proposed !== undefined ? [ComputeAllowance.pattern(proposed)] : [])],
+          metadata: approval,
         })
         const job = await JobBroker.start(
           { ...value, approval: plan.provider === "local" ? undefined : plan.digest },

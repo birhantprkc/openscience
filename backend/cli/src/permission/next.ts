@@ -282,6 +282,9 @@ export namespace PermissionNext {
   const SPEND = ["atlas", "websearch", ...EXACT_PLAN]
   const PLAN_DIGEST = /^[a-f0-9]{64}$/
   const STUDY_SCOPE = /^study:stu_[A-Za-z0-9]+$/
+  // A time-bounded allowance for Modal jobs ("allowance:<minutes>"): the
+  // compute tool asks under it only while the dispatched timeouts fit.
+  const ALLOWANCE = /^allowance:\d+$/
 
   function spendFilter(permission: string, rules: Ruleset): Ruleset {
     if (!SPEND.includes(permission)) return rules
@@ -290,10 +293,29 @@ export namespace PermissionNext {
         (rule) =>
           rule.action !== "allow" ||
           PLAN_DIGEST.test(rule.pattern) ||
-          (REMOTE_PLAN.has(permission) && STUDY_SCOPE.test(rule.pattern)),
+          (REMOTE_PLAN.has(permission) && STUDY_SCOPE.test(rule.pattern)) ||
+          (permission === "modal" && ALLOWANCE.test(rule.pattern)),
       )
     }
     return rules.filter((rule) => rule.action !== "allow" || rule.permission === permission)
+  }
+
+  /** The time-bounded compute allowances that apply to one session: the
+   * conversation's own grants and the durable ones, with when each durable
+   * grant was made so its use can be metered from that point. */
+  export async function allowances(sessionID: string, permission: "modal") {
+    const s = await state()
+    const durable = (scope: "project" | "global", entries: Standing[]) =>
+      entries
+        .filter((entry) => entry.permission === permission && ALLOWANCE.test(entry.pattern))
+        .map((entry) => ({ pattern: entry.pattern, scope, created: entry.created }))
+    return [
+      ...(s.session[sessionID] ?? [])
+        .filter((rule) => rule.permission === permission && rule.action === "allow" && ALLOWANCE.test(rule.pattern))
+        .map((rule) => ({ pattern: rule.pattern, scope: "session" as const, created: undefined })),
+      ...durable("project", s.standing.project),
+      ...durable("global", s.standing.global),
+    ]
   }
 
   async function persist(s: State) {

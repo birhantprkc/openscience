@@ -21,7 +21,7 @@ export const RESEARCH_ACCESS_OPTIONS = [
   {
     value: "full",
     label: "Full access",
-    description: "Run without routine prompts; provider and system safety boundaries still apply",
+    description: "Run without routine prompts; paid compute asks once per time allowance",
   },
 ] as const satisfies ReadonlyArray<{
   value: ResearchAccessMode

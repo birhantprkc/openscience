@@ -12,6 +12,7 @@ import { runSummary } from "./experiments"
 import { Tool } from "./tool"
 import DESCRIPTION from "./study.txt"
 import { Instance } from "@/project/instance"
+import { ComputeAllowance } from "@/permission/allowance"
 import { SessionWorkspace } from "@/session/workspace"
 
 /** The approval pattern one study's remote runs share. */
@@ -38,10 +39,20 @@ async function studyApproval(ctx: Tool.Context, study: Experiments.Study) {
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key} ${value}`)
     .join(", ")
+  // The work a study asks for does not end at its last run: the winning
+  // configuration is refit, an external baseline is scored on the same folds.
+  // Those jobs are dispatched with compute_job, outside the study's own
+  // pattern, and each once asked again on its exact plan (one waited
+  // overnight). The approval carries a time allowance for such follow-up
+  // Modal jobs, sized by the study's hour budget.
+  const followUp =
+    study.target.kind === "modal"
+      ? ComputeAllowance.pattern(study.budget.maxHours !== undefined ? Math.round(study.budget.maxHours * 60) : 120)
+      : undefined
   await ctx.ask({
     permission,
     patterns: [pattern],
-    always: [pattern],
+    always: [pattern, ...(followUp ? [followUp] : [])],
     metadata: {
       study: {
         id: study.id,
@@ -50,11 +61,16 @@ async function studyApproval(ctx: Tool.Context, study: Experiments.Study) {
         concurrency: study.concurrency,
         budget: study.budget,
         killCriteria: study.killCriteria,
+        ...(followUp ? { followUpMinutes: ComputeAllowance.minutes(followUp) } : {}),
       },
       compute: {
         purpose: `Approve the runs of study "${study.name}" on ${study.target.kind}${
           study.target.kind === "modal" ? ` (${study.target.gpu})` : ""
-        }: ${budget || "no budget"}; kill rule ${study.killCriteria || "none"}. One approval covers every run the study dispatches inside that budget.`,
+        }: ${budget || "no budget"}; kill rule ${study.killCriteria || "none"}. One approval covers every run the study dispatches inside that budget${
+          followUp
+            ? `, and up to ${ComputeAllowance.describe(ComputeAllowance.minutes(followUp)!)} of follow-up Modal jobs (final refit, external baselines)`
+            : ""
+        }.`,
       },
     },
   })

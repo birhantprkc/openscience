@@ -4,6 +4,7 @@ import path from "node:path"
 import z from "zod"
 import { ComputeJobs } from "../../src/compute/jobs"
 import { ModalUpload } from "../../src/compute/modal/upload"
+import { PermissionNext } from "../../src/permission/next"
 import { Instance } from "../../src/project/instance"
 import { Session } from "../../src/session"
 import { SessionFilesystem } from "../../src/session/filesystem"
@@ -374,9 +375,40 @@ test("starts Modal through JobBroker only after a digest-bound scoped approval",
 
       const dispatched = await tool.execute({ action: "start", ...workload }, context(session.id, asked))
       expect(asked).toHaveLength(1)
-      expect(asked[0]).toMatchObject({ permission: "modal", patterns: [digest], always: [digest] })
+      // The exact plan asks; an hour's allowance (four of this five-minute
+      // job, rounded up to the hour) is offered beside it.
+      expect(asked[0]).toMatchObject({ permission: "modal", patterns: [digest], always: [digest, "allowance:60"] })
+      expect(asked[0]!.metadata).toMatchObject({ compute: { allowance: { proposed_minutes: 60 } } })
       expect(dispatched.metadata.job?.modal?.approval).toBe(digest)
       expect(dispatched.output).toContain("Dispatched modal job")
+
+      // The person answered "this session": the exact plan and the hour's
+      // allowance are granted. A different job (new script, new digest) in
+      // the same session then asks under the allowance, not on a new digest,
+      // while its timeout still fits beside the five minutes already used.
+      const granted = PermissionNext.ask({
+        id: "permission_reviewed",
+        sessionID: session.id,
+        permission: "modal",
+        patterns: asked[0]!.patterns ?? [],
+        always: asked[0]!.always ?? [],
+        metadata: {},
+        ruleset: [{ permission: "modal", pattern: "*", action: "ask" }],
+        mode: "approve",
+      })
+      await PermissionNext.reply({ requestID: "permission_reviewed", reply: "session" })
+      await granted
+      const second = await tool.execute(
+        { action: "start", ...workload, name: "Modal follow-up", command: "python -c 'print(43)'" },
+        context(session.id, asked),
+      )
+      expect(asked).toHaveLength(2)
+      expect(asked[1]).toMatchObject({ permission: "modal", patterns: ["allowance:60"] })
+      expect(asked[1]!.metadata).toMatchObject({
+        compute: { allowance: { covered_by: "allowance:60", used_minutes: 5 } },
+      })
+      expect(second.metadata.job?.modal?.approval).toMatch(/^[a-f0-9]{64}$/)
+      expect(second.metadata.job?.modal?.approval).not.toBe(digest)
     },
   })
 })

@@ -2,6 +2,7 @@ import z from "zod"
 import { Tool } from "./tool"
 import { JobBroker } from "@/compute/job-broker"
 import { Instance } from "@/project/instance"
+import { ComputeAllowance } from "@/permission/allowance"
 import { SessionFilesystem } from "@/session/filesystem"
 
 export const ModalTool = Tool.define("modal", {
@@ -110,12 +111,29 @@ export const ModalTool = Tool.define("modal", {
     }
     const plan = await JobBroker.plan(request, broker)
     if (plan.provider !== "modal") throw new Error("Modal approval returned a non-Modal plan")
-    const metadata = { compute: { ...plan, name: input.name } }
+    // Same contract as compute_job: ask under a fitting time allowance, or on
+    // the exact plan with an allowance offered beside it.
+    const allowance = await ComputeAllowance.cover({
+      sessionID: ctx.sessionID,
+      timeoutMinutes: plan.timeout_minutes,
+      jobs: await JobBroker.list(broker).catch(() => []),
+    })
+    const proposed = ComputeAllowance.propose(plan.timeout_minutes)
+    const metadata = {
+      compute: {
+        ...plan,
+        name: input.name,
+        allowance: {
+          proposed_minutes: proposed,
+          ...(allowance ? { covered_by: allowance.pattern, used_minutes: allowance.used } : {}),
+        },
+      },
+    }
     ctx.metadata({ title: `Review Modal job: ${input.name}`, metadata })
     await ctx.ask({
       permission: "modal",
-      patterns: [plan.digest],
-      always: [plan.digest],
+      patterns: [allowance?.pattern ?? plan.digest],
+      always: [plan.digest, ComputeAllowance.pattern(proposed)],
       metadata,
     })
 
