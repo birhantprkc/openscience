@@ -171,20 +171,43 @@ describe("ModalPlan", () => {
     expect(prepared.plan.uploads.map((file) => file.path)).toEqual(["src/train.py"])
   })
 
-  test("rejects an oversized sparse input before reading its contents", async () => {
+  test("a swept oversized input is rejected before it is read; a file named literally may be large", async () => {
     const root = await project()
     const large = path.join(root, "src", "large.bin")
     await fs.writeFile(large, "")
     await fs.truncate(large, ModalUpload.LIMIT + 1)
+    {
+      const reads: string[] = []
+      using guard = ModalUpload.testing({
+        read(file) {
+          reads.push(file)
+        },
+      })
+      // A glob sweeps the file up: the person never saw its size listed.
+      await expect(ModalPlan.prepare({ ...input(root), uploads: ["src/*.bin"] })).rejects.toThrow(
+        "Name it in uploads explicitly (no glob) to send a file up to 2 GiB",
+      )
+      expect(reads).toEqual([])
+    }
+    // Named by path, the checkpoint travels: the plan lists it as named, with
+    // its size and hash, and the approval is of that file.
+    const prepared = await ModalPlan.prepare({ ...input(root), uploads: ["src/large.bin", "src/*.py"] })
+    expect(prepared.plan.uploads.find((file) => file.path === "src/large.bin")).toMatchObject({
+      size: ModalUpload.LIMIT + 1,
+      named: true,
+    })
+    expect(prepared.plan.uploads.find((file) => file.path === "src/train.py")?.named).toBeUndefined()
+    expect(prepared.plan.upload_bytes).toBeGreaterThan(ModalUpload.LIMIT)
+    // The hard ceiling for one file still holds, before any read.
+    await fs.truncate(large, ModalUpload.NAMED_LIMIT + 1)
     const reads: string[] = []
     using guard = ModalUpload.testing({
       read(file) {
         reads.push(file)
       },
     })
-
     await expect(ModalPlan.prepare({ ...input(root), uploads: ["src/large.bin"] })).rejects.toThrow(
-      "input exceeds the 100 MiB approval limit",
+      "exceeds the 2 GiB limit for one file",
     )
     expect(reads).toEqual([])
   })

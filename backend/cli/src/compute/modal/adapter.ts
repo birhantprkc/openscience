@@ -40,6 +40,8 @@ export namespace ModalAdapter {
     canonical: string
     size: number
     sha256: string
+    /** Named literally in the request, so it may exceed the swept limit. */
+    named?: boolean
   }
 
   export type Spec = {

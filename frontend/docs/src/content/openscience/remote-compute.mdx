@@ -63,6 +63,10 @@ The Compute panel includes connections for TensorPool, Lambda, Prime Intellect, 
 
 These connections do not imply automatic paid instance creation or arbitrary provider commands. If the panel reports credential-only access or a failed connection test, resolve that state before relying on it for a task.
 
+## Large inputs
+
+Modal jobs stage their inputs from the working directory. Everything a glob or the default sweep picks up must fit 100 MiB together, so an approval never covers bytes that were not listed. A file the request names by its exact path, such as a model checkpoint or a dataset, may be up to 2 GiB (4 GiB for a job in all); the approval card lists it with its size and hash. Name large files in `uploads` rather than compressing them to fit.
+
 ## Keep costs and outputs explicit
 
 Ask for a resource estimate, maximum duration, and a pilot before a large run. Use the provider's account limits in addition to instructions in the conversation. After completion, retrieve and inspect outputs, then release resources that are no longer needed.

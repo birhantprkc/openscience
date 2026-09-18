@@ -232,6 +232,11 @@ describe("ModalAdapter input guard", () => {
     expect(() => ModalAdapter.validateUploads([{ ...file, size: ModalUpload.LIMIT + 1 }])).toThrow(
       "input exceeds the 100 MiB approval limit",
     )
+    // A file the plan marked as named may be large; nothing may pass 2 GiB.
+    expect(() => ModalAdapter.validateUploads([{ ...file, size: ModalUpload.LIMIT + 1, named: true }])).not.toThrow()
+    expect(() => ModalAdapter.validateUploads([{ ...file, size: ModalUpload.NAMED_LIMIT + 1, named: true }])).toThrow(
+      "exceeds the 2 GiB limit for one file",
+    )
     expect(() =>
       ModalAdapter.validateUploads([
         { ...file, size: 60 * 1024 * 1024 },
@@ -310,7 +315,7 @@ describe("ModalAdapter input guard", () => {
       ModalAdapter.preflightUploads(root, [
         { path: "source.bin", canonical: source, size: approved.size, sha256: approved.sha256 },
       ]),
-    ).rejects.toThrow("input exceeds the 100 MiB approval limit")
+    ).rejects.toThrow("input changed after approval")
     expect(reads).toEqual([])
     await fs.rm(root, { recursive: true, force: true })
   })

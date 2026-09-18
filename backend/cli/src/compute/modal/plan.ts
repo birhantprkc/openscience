@@ -73,6 +73,7 @@ export namespace ModalPlan {
         path: z.string(),
         size: z.number().int().nonnegative(),
         sha256: z.string().length(64),
+        named: z.boolean().optional(),
       }),
     ),
     upload_bytes: z.number().int().nonnegative(),
@@ -251,7 +252,10 @@ export namespace ModalPlan {
         `${label} uploads matched no files under the working directory (${patterns.join(", ")}). Upload paths are relative to cwd; name the files as they sit inside it. No compute job was dispatched.`,
       )
     }
-    const bytes = ModalUpload.validate(candidates, label)
+    // A pattern with no glob character names one file: that file may be
+    // large, and the approval shows it by path, size and hash.
+    const named = new Set(patterns.filter((pattern) => !/[*?[\]{}]/.test(pattern)).map(posix))
+    const bytes = ModalUpload.validate(candidates, label, { named })
     const result: ModalAdapter.File[] = []
     for (const file of candidates) {
       result.push({
@@ -259,6 +263,7 @@ export namespace ModalPlan {
         canonical: file.canonical,
         size: file.size,
         sha256: (await ModalUpload.hash(file.canonical, file.snapshot, label)).sha256,
+        ...(named.has(file.path) ? { named: true } : {}),
       })
     }
     return { files: result, bytes }
@@ -351,7 +356,8 @@ export namespace ModalPlan {
       })
     }
     const ordered = candidates.toSorted((a, b) => a.path.localeCompare(b.path))
-    const bytes = ModalUpload.validate(ordered, label)
+    // A staged folder is swept, not named: the implicit limit applies to all of it.
+    const bytes = ModalUpload.validate(ordered, label, { named: new Set() })
     const files: ModalAdapter.File[] = []
     for (const file of ordered) {
       files.push({
@@ -385,7 +391,12 @@ export namespace ModalPlan {
       command: input.command,
       cwd: input.cwd,
       workspace_cwd: workspaceCwd(input.workspaceCwd),
-      uploads: upload.files.map((file) => ({ path: file.path, size: file.size, sha256: file.sha256 })),
+      uploads: upload.files.map((file) => ({
+        path: file.path,
+        size: file.size,
+        sha256: file.sha256,
+        ...(file.named ? { named: true } : {}),
+      })),
       upload_bytes: upload.bytes,
       outputs: input.outputs.toSorted(),
       warning: "This run uses your Modal account and may incur charges until it exits, times out, or is cancelled.",

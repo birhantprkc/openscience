@@ -383,7 +383,9 @@ export namespace ComputeJobs {
         gpu: z.string(),
         network: z.enum(["unrestricted", "none"]),
         timeout_minutes: z.number().int().positive(),
-        uploads: z.array(z.object({ path: z.string(), size: z.number(), sha256: z.string() })),
+        uploads: z.array(
+          z.object({ path: z.string(), size: z.number(), sha256: z.string(), named: z.boolean().optional() }),
+        ),
         upload_bytes: z.number().int().nonnegative(),
         approval: z.string().length(64),
         sdk: z.string(),

@@ -95,7 +95,7 @@ const ComputeWorkload = z
       .max(100)
       .optional()
       .describe(
-        "Files to stage, relative to cwd. Remote targets stage all of cwd by default; an empty array stages nothing.",
+        "Files to stage, relative to cwd. Remote targets stage all of cwd by default; an empty array stages nothing. Swept files (globs, the default cwd) fit 100 MiB together; a file named by its exact path (a checkpoint, a dataset) may be up to 2 GiB, 4 GiB in all.",
       ),
     exclude_uploads: z.array(z.string().trim().min(1).max(2_000)).max(20).optional(),
     packages: z.array(z.string().trim().min(1).max(500)).max(100).optional(),
