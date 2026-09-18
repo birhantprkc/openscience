@@ -55,8 +55,14 @@ export namespace Deliverables {
         .flatMap((sentence) => [...sentence.matchAll(PATH)].map((match) => match[1])),
       ...sentences.flatMap(consulted),
     ])
+    // An abbreviated path (".../inputs/labels.csv", "…/out.csv") names a
+    // place the writer elided, not a file anyone can check.
     const paths = [...new Set([...text.matchAll(PATH)].map((match) => match[1]))].filter(
-      (candidate) => !/^(?:https?|www\.)/i.test(candidate) && !candidate.endsWith(".py") && !waived.has(candidate),
+      (candidate) =>
+        !/^(?:https?|www\.)/i.test(candidate) &&
+        !candidate.endsWith(".py") &&
+        !/(?:^|\/)(?:\.{3,}|…)(?:\/|$)/.test(candidate) &&
+        !waived.has(candidate),
     )
     if (!paths.length) return []
     if (!INTENT.test(text) && !SHAPE.test(text) && paths.length < 2) return []
@@ -208,17 +214,26 @@ export const DeliverablesUnit: Plugin = async () => {
       // request and checks the deliverables it asked for itself.
       const session = await Session.get(input.sessionID).catch(() => undefined)
       if (session?.parentID) return
+      // Only the person's own words specify deliverables. A synthetic prompt
+      // (a worker's report waking the lead, a harness continuation) is full
+      // of paths it discusses, none of which the user asked for.
+      const spoken = output.parts.filter(
+        (part): part is Extract<typeof part, { type: "text" }> => part.type === "text" && !part.synthetic,
+      )
+      if (!spoken.length) return
       // Only the first real request defines the deliverables; later turns may
       // steer the work but the checklist stays anchored to what was asked.
+      // Every prompt carries an `internal` marker for restart replay, so the
+      // anchor is the first user message with text the person typed.
       const earlier = (await Session.messages({ sessionID: input.sessionID }).catch(() => [])).filter(
-        (message) => message.info.role === "user" && message.info.id !== output.message.id && !message.info.internal,
+        (message) =>
+          message.info.role === "user" &&
+          message.info.id !== output.message.id &&
+          message.info.internal?.type !== "continuation" &&
+          message.parts.some((part) => part.type === "text" && !part.synthetic),
       )
       if (earlier.length) return
-      const text = output.parts
-        .filter((part): part is Extract<typeof part, { type: "text" }> => part.type === "text")
-        .map((part) => part.text)
-        .join("\n")
-      state.deliverables = Deliverables.detect(text)
+      state.deliverables = Deliverables.detect(spoken.map((part) => part.text).join("\n"))
     },
     async "loop.before_finish"(input, output) {
       const state = HarnessState.get(input.sessionID)
