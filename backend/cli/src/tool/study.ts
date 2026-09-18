@@ -77,7 +77,7 @@ async function studyApproval(ctx: Tool.Context, study: Experiments.Study) {
   return `Remote runs approved for this study on ${study.target.kind}; each dispatch is recorded with its plan digest.`
 }
 
-const Action = z.enum(["create", "status", "propose", "start", "record", "drop", "conclude"])
+const Action = z.enum(["create", "status", "propose", "start", "record", "drop", "conclude", "reopen"])
 type Metadata = {
   study?: Experiments.Study
   ideas?: Experiments.Idea[]
@@ -114,7 +114,9 @@ export const StudyTool = Tool.define("study", {
       .describe(
         'Rules joined by OR: "2 minutes", "5000 steps", "val_loss plateaus for 500 steps", "val_loss > 5 for 100 steps".',
       ),
-    budget: Experiments.Budget.optional(),
+    budget: Experiments.Budget.optional().describe(
+      "create: the study's budget; reopen: the additional budget added to it.",
+    ),
     review: z.boolean().optional().describe("Critique review of the training code before the baseline (default true)."),
     root: z
       .string()
@@ -170,6 +172,53 @@ export const StudyTool = Tool.define("study", {
     const current = params.study_id
       ? await Experiments.getStudy(params.study_id)
       : await Experiments.studyForSession(ctx.sessionID)
+
+    if (params.action === "reopen") {
+      // A concluded study is where the next question usually starts: the
+      // same metric, folds and ledger, a fresh budget the person agreed to.
+      // Reopening keeps the runs, ideas, lessons and the best run as the
+      // baseline of what follows, instead of a second study that starts from
+      // nothing beside the first.
+      const target = current ?? (await Experiments.lastStudyForSession(ctx.sessionID))
+      if (!target) throw new Error("reopen needs a study: none has run in this session; pass study_id.")
+      if (target.status === "running") throw new Error(`Study ${target.id} is already running.`)
+      const extra = params.budget ?? {}
+      if (extra.maxRuns === undefined && extra.maxHours === undefined && extra.maxCostUSD === undefined) {
+        throw new Error(
+          "reopen needs the additional budget the user agreed to (maxHours, maxRuns or maxCostUSD, added to what the study already had).",
+        )
+      }
+      const budget: Experiments.Budget = {
+        ...target.budget,
+        ...(extra.maxRuns !== undefined ? { maxRuns: (target.budget.maxRuns ?? 0) + extra.maxRuns } : {}),
+        ...(extra.maxHours !== undefined ? { maxHours: (target.budget.maxHours ?? 0) + extra.maxHours } : {}),
+        ...(extra.maxCostUSD !== undefined ? { maxCostUSD: (target.budget.maxCostUSD ?? 0) + extra.maxCostUSD } : {}),
+        ...(extra.target !== undefined ? { target: extra.target } : {}),
+        ...(extra.runMinutes !== undefined ? { runMinutes: extra.runMinutes } : {}),
+      }
+      const reopened = await StudyDriver.reopen(target.id, { budget, sessionID: ctx.sessionID })
+      const approval = await studyApproval(ctx, reopened)
+      const queued = (await Experiments.listIdeas(reopened.id, { status: ["queued"] })).length
+      await StudyLedger.render(reopened.id)
+      return {
+        title: `Study reopened: ${reopened.name}`,
+        metadata: { study: reopened } satisfies Metadata as Metadata,
+        output: [
+          `Study ${reopened.id} is running again with budget ${Object.entries(budget)
+            .filter(([, value]) => value !== undefined)
+            .map(([key, value]) => `${key} ${value}`)
+            .join(
+              ", ",
+            )}. Its runs, ideas and lessons are kept; the best run (${reopened.bestRunID ?? "none"}) is the baseline of what follows.`,
+          approval,
+          queued
+            ? `${queued} idea${queued === 1 ? "" : "s"} still queued.`
+            : "No ideas queued: propose at least 3 before starting.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      }
+    }
 
     if (params.action === "create") {
       if (current) {

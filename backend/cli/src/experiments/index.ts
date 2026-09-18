@@ -879,6 +879,15 @@ export namespace Experiments {
     return row ? study(row) : undefined
   }
 
+  /** The session's most recent study in any state, for reopening. */
+  export async function lastStudyForSession(sessionID: string, input?: { projectID?: string }) {
+    const database = await db(projectID(input))
+    const row = database
+      .query(`SELECT * FROM study WHERE session_id = ? ORDER BY created_at DESC LIMIT 1`)
+      .get(sessionID) as StudyRow | null
+    return row ? study(row) : undefined
+  }
+
   export async function updateStudy(
     id: string,
     patch: Partial<
@@ -895,6 +904,7 @@ export namespace Experiments {
         | "review"
         | "purpose"
         | "name"
+        | "sessionID"
       >
     > & { turns?: number; costUSD?: number },
     input?: { projectID?: string },
@@ -906,7 +916,7 @@ export namespace Experiments {
     const next = { ...existing, ...patch, updatedAt: Date.now() }
     database
       .query(
-        `UPDATE study SET status = ?, baseline_run_id = ?, best_run_id = ?, lessons = ?, conclusion = ?, concurrency = ?, kill_criteria = ?, budget = ?, review = ?, purpose = ?, name = ?, turns = ?, cost_usd = ?, updated_at = ? WHERE id = ?`,
+        `UPDATE study SET status = ?, baseline_run_id = ?, best_run_id = ?, lessons = ?, conclusion = ?, concurrency = ?, kill_criteria = ?, budget = ?, review = ?, purpose = ?, name = ?, turns = ?, cost_usd = ?, session_id = ?, updated_at = ? WHERE id = ?`,
       )
       .run(
         next.status,
@@ -922,6 +932,7 @@ export namespace Experiments {
         next.name,
         next.turns,
         next.costUSD,
+        next.sessionID,
         next.updatedAt,
         id,
       )

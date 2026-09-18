@@ -195,4 +195,16 @@ test("an interrupted question says what happened to the decision instead of warn
   const cut = abortedToolPart(read, "Tool execution aborted", { now: 40 })
   if (cut.state.status !== "error") throw new Error("Expected the read to be closed")
   expect(cut.state.error).toBe("Tool execution aborted. The read call only reads; nothing changed.")
+  // A wait on a compute job that is cut off leaves the job running: the
+  // receipt says so, and says not to dispatch it again.
+  const wait: MessageV2.ToolPart = {
+    ...question,
+    tool: "compute_job",
+    state: { ...question.state, input: { action: "wait", job_id: "89d89528-909", seconds: 600 } },
+  }
+  const interrupted = abortedToolPart(wait, "Tool execution aborted", { now: 40 })
+  if (interrupted.state.status !== "error") throw new Error("Expected the wait to be closed")
+  expect(interrupted.state.error).toBe(
+    "Tool execution aborted. The wait was interrupted; job 89d89528-909 keeps running on its target. Check it with compute_job status or wait again rather than dispatching it a second time.",
+  )
 })

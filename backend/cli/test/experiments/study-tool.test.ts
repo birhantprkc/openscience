@@ -166,6 +166,23 @@ describe("study and experiments tools", () => {
         expect((await Experiments.getStudy(active.id))?.status).toBe("concluded")
         expect(await Experiments.studyForSession(session.id)).toBeUndefined()
         expect(await Bun.file(path.join(workspace, "study.md")).text()).toContain("plain sgd is enough here")
+
+        // "Continue the study": reopening adds the budget the person agreed
+        // to and keeps the record, instead of a second study from nothing.
+        await expect(study.execute({ action: "reopen" }, ctx)).rejects.toThrow("additional budget")
+        const reopened = await study.execute({ action: "reopen", budget: { maxRuns: 4, maxHours: 1 } }, ctx)
+        expect(reopened.title).toBe("Study reopened: line fit")
+        expect(reopened.output).toContain("maxRuns 10")
+        expect(reopened.output).toContain("maxHours 1")
+        expect(reopened.output).toContain(`best run (${run.id})`)
+        const again = (await Experiments.studyForSession(session.id))!
+        expect(again.id).toBe(active.id)
+        expect(again.status).toBe("running")
+        expect(again.budget).toMatchObject({ maxRuns: 10, maxHours: 1 })
+        expect((await Experiments.listRuns({ studyID: again.id })).map((item) => item.id)).toEqual([run.id])
+        await expect(study.execute({ action: "reopen", budget: { maxRuns: 1 } }, ctx)).rejects.toThrow(
+          "already running",
+        )
       },
     })
   })

@@ -553,6 +553,25 @@ export namespace StudyDriver {
     return study
   }
 
+  /** A concluded, halted or paused study runs again under a larger budget,
+   * from the session that reopens it; its record continues rather than
+   * starting over. */
+  export async function reopen(studyID: string, input: { budget: Experiments.Budget; sessionID: string }) {
+    const study = await Experiments.updateStudy(studyID, {
+      status: "running",
+      budget: input.budget,
+      sessionID: input.sessionID,
+    })
+    if (!study) throw new Error(`Study ${studyID} not found`)
+    await Experiments.addEvent(studyID, "resumed", `reopened with budget ${JSON.stringify(input.budget)}`)
+    const current = runtime(studyID)
+    current.lastNudgeAt = 0
+    current.nudgedRuns = -1
+    current.pending.length = 0
+    start()
+    return study
+  }
+
   export async function conclude(studyID: string, conclusion: string) {
     await halt(studyID, "study concluded")
     const study = await Experiments.updateStudy(studyID, { status: "concluded", conclusion })

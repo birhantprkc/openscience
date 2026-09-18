@@ -46,7 +46,12 @@ const OBSERVERS = new Set([
  * in general. A budget question that was cut off must not read as "its side
  * effects may have completed": nothing was chosen and nothing was recorded,
  * and the model should simply ask again. */
-export function interruptionReceipt(tool: string, started: boolean) {
+export function interruptionReceipt(tool: string, started: boolean, input?: unknown) {
+  const action = (input as { action?: string; job_id?: string } | undefined)?.action
+  if (tool === "compute_job" && action === "wait") {
+    const id = (input as { job_id?: string }).job_id
+    return `The wait was interrupted; ${id ? `job ${id}` : "the job"} keeps running on its target. Check it with compute_job status or wait again rather than dispatching it a second time.`
+  }
   if (tool === "question") {
     return started
       ? "The question was shown but no answer arrived before the interruption: no option was chosen and nothing was recorded. Ask again if the decision is still open."
@@ -70,9 +75,13 @@ export function abortedToolPart(
   const now = options.now ?? Date.now()
   const running = part.state.status === "running" ? part.state : undefined
   const start = running ? running.time.start : now
-  const exact = part.tool === "question" || OBSERVERS.has(part.tool)
+  const waiting =
+    part.tool === "compute_job" && (part.state.input as { action?: string } | undefined)?.action === "wait"
+  const exact = part.tool === "question" || OBSERVERS.has(part.tool) || waiting
   const detail =
-    options.explain === false || (running && !exact) ? "" : `. ${interruptionReceipt(part.tool, !!running)}`
+    options.explain === false || (running && !exact)
+      ? ""
+      : `. ${interruptionReceipt(part.tool, !!running, part.state.input)}`
   return {
     ...part,
     state: {

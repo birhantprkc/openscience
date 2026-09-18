@@ -861,12 +861,39 @@ export function createComputeJobTool(base?: JobBroker.Options) {
         }
       }
       if (input.action === "wait") {
-        const result = await JobBroker.waitForChange(state.job.id, {
+        // A wait the person interrupts (a stop, a message that ends the turn)
+        // is not a failure of the job, which keeps running where it is. Say
+        // exactly that, with the job's state, instead of a bare abort that
+        // left one agent unsure whether to dispatch the job a second time.
+        const started = Date.now()
+        const interrupted = await JobBroker.waitForChange(state.job.id, {
           ...state.resolved,
           timeout: input.seconds * 1_000,
           signal: ctx.abort,
           after: state.job,
-        })
+        }).then(
+          (value) => ({ result: value }),
+          (error: unknown) => {
+            if (!ctx.abort.aborted) throw error
+            // No lookup here: the turn is ending and a late result must land
+            // before its call is closed as aborted. The state at the start of
+            // the wait is what is known.
+            return { job: state.job, waited_ms: Date.now() - started }
+          },
+        )
+        if (!("result" in interrupted)) {
+          return {
+            title: `Compute job: ${interrupted.job.name}`,
+            metadata: { compute_job: { action: input.action, job: interrupted.job } },
+            output: json({
+              ...summary(interrupted.job),
+              wait_interrupted: true,
+              waited_ms: interrupted.waited_ms,
+              note: `The wait was interrupted after ${Math.round(interrupted.waited_ms / 1000)} s; job ${interrupted.job.id} was ${interrupted.job.status} when the wait began and continues on ${interrupted.job.target_label}. Do not dispatch it again: check it with compute_job status or wait for it again.`,
+            }),
+          }
+        }
+        const result = interrupted.result
         return {
           title: `Compute job: ${result.job.name}`,
           metadata: { compute_job: { action: input.action, job: result.job } },

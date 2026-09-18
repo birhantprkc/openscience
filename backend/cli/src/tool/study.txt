@@ -8,5 +8,6 @@ Actions (one per call):
 - record: run_id, kept, analysis, optional conclusion/lessons; baseline:true marks the reference run.
 - drop: idea_id + reason.
 - conclude: conclusion (what was learned, best configuration, what remains open).
+- reopen: budget (the additional maxHours/maxRuns/maxCostUSD the user just agreed to). Continues a concluded, halted or paused study with its runs, ideas, lessons and best run intact, instead of creating a second study.
 
 Rules: exactly one run per idea; record every ended run; keep up to concurrency runs live; read metrics with the experiments tool; never ask whether to continue while budget remains.
