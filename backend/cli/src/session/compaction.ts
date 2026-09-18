@@ -737,17 +737,26 @@ Output exactly this Markdown structure, keeping every section (write "(none)" wh
   // each is small and the model steers by them.
   const PRUNE_PROTECTED_TOOLS = ["skill", "artifact", "todowrite"]
 
-  // goes backwards through parts until there are 40_000 tokens worth of tool
-  // calls. then erases output of previous tool calls. idea is to throw away old
-  // tool calls that are no longer relevant.
-  export async function prune(input: { sessionID: string }) {
+  // Walks the transcript backwards, keeps the newest 40k tokens of tool
+  // output, and clears the tool outputs older than that. Old results are the
+  // context's dead weight; the model steers by what it did recently.
+  //
+  // A provider's cached prefix ends at the first cleared part, and everything
+  // after it is re-read at full price. With no `target` the prune is total,
+  // which costs nothing when the cache is cold. With a `target` (the tokens
+  // the budget needs back while the cache is warm), the prune clears only that
+  // much, newest-eligible first, so the invalidated prefix is as short as the
+  // shortfall allows: one prune inside the window once re-read 143k tokens to
+  // reclaim 70k.
+  export async function prune(input: { sessionID: string; target?: number }) {
     const config = await Config.get()
     if (config.compaction?.prune === false) return 0
-    log.info("pruning")
+    log.info("pruning", { target: input.target })
     const msgs = await Session.messages({ sessionID: input.sessionID })
     let total = 0
     let pruned = 0
     const toPrune = []
+    const wanted = input.target === undefined ? undefined : Math.max(input.target, PRUNE_MINIMUM)
 
     loop: for (let msgIndex = msgs.length - 1; msgIndex >= 0; msgIndex--) {
       const msg = msgs[msgIndex]
@@ -765,6 +774,7 @@ Output exactly this Markdown structure, keeping every section (write "(none)" wh
             const estimate = Token.estimate(part.state.output) + images
             total += estimate
             if (total > PRUNE_PROTECT) {
+              if (wanted !== undefined && pruned >= wanted) break loop
               pruned += estimate
               toPrune.push(part)
             }
@@ -779,7 +789,7 @@ Output exactly this Markdown structure, keeping every section (write "(none)" wh
           await Session.updatePart(part)
         }
       }
-      log.info("pruned", { count: toPrune.length })
+      log.info("pruned", { count: toPrune.length, targeted: wanted !== undefined })
       return pruned
     }
     return 0

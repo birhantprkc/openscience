@@ -1560,7 +1560,12 @@ export namespace SessionPrompt {
         // Cheapest first: clear stale tool outputs / older images. If that reclaims a
         // meaningful chunk, skip the expensive LLM compaction this turn — the next turn
         // re-checks on real token usage. Only summarize when clearing can't hold budget.
-        const reclaimed = await SessionCompaction.prune({ sessionID })
+        // This runs mid-turn, inside the provider's cache window: clear only what
+        // brings the usage back under the budget, with a fifth of the budget to spare,
+        // rather than every old result at once.
+        const budget = SessionCompaction.usableContext(model, await Config.get(), lastUser.context).usable
+        const excess = Math.max(0, TokenUsage.total(lastFinished!.tokens) - budget)
+        const reclaimed = await SessionCompaction.prune({ sessionID, target: excess + Math.floor(budget / 5) })
         if (reclaimed > 0) {
           log.info("prune reclaimed context; deferring compaction", { sessionID, reclaimed })
           // Re-read the stream so THIS turn's request reflects the prune. prune() persists
@@ -1866,7 +1871,10 @@ export namespace SessionPrompt {
       }
       const reducible = preflight.history > 0 && preflight.newest <= preflight.hard
       if (preflight.total > preflight.hard && config.compaction?.auto !== false && reducible) {
-        const reclaimed = await SessionCompaction.prune({ sessionID })
+        const reclaimed = await SessionCompaction.prune({
+          sessionID,
+          target: preflight.total - preflight.hard + Math.floor(preflight.hard / 5),
+        })
         if (reclaimed > 0) {
           SessionTelemetry.recordCompaction({
             sessionID,

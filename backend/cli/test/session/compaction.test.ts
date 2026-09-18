@@ -1729,4 +1729,70 @@ describe("session.compaction.prune protections", () => {
       expect(compacted("prt_todo")).toBe(false)
     })
   })
+
+  test("a targeted prune clears only the shortfall, newest-eligible first, so the cached prefix stays long", async () => {
+    await using tmp = await tmpdir()
+    await withSession(tmp.path, async (session) => {
+      const user = await Session.updateMessage({
+        id: await MessageV2.nextMessageID(session.id),
+        sessionID: session.id,
+        role: "user",
+        time: { created: 1 },
+        agent: "research",
+        model: { providerID: "test", modelID: "test-model" },
+        effort: "normal",
+      })
+      const assistant = await Session.updateMessage({
+        id: await MessageV2.nextMessageID(session.id),
+        sessionID: session.id,
+        role: "assistant",
+        parentID: user.id,
+        modelID: "test-model",
+        providerID: "test",
+        mode: "research",
+        agent: "research",
+        path: { cwd: tmp.path, root: tmp.path },
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        finish: "tool-calls",
+        time: { created: 2, completed: 3 },
+      })
+      // Six equal results of 25k tokens each, oldest first. The newest result
+      // sits inside the protected 40k; the one before it crosses that line
+      // and is the first eligible; a total prune would clear all five.
+      const chunk = "y".repeat(4 * 25_000)
+      const ids = ["prt_a", "prt_b", "prt_c", "prt_d", "prt_e", "prt_f"]
+      for (const id of ids) {
+        await Session.updatePart({
+          id,
+          sessionID: session.id,
+          messageID: assistant.id,
+          type: "tool",
+          tool: "bash",
+          callID: `call_${id}`,
+          state: {
+            status: "completed",
+            input: {},
+            title: "bash",
+            output: chunk,
+            metadata: {},
+            time: { start: 1, end: 2 },
+          },
+        })
+      }
+      await Session.flushPendingParts(session.id)
+      // The budget needs 30k back: the two newest eligible results cover it;
+      // the three older ones stay, and with them the cached prefix up to there.
+      const reclaimed = await SessionCompaction.prune({ sessionID: session.id, target: 30_000 })
+      expect(reclaimed).toBe(50_000)
+      const parts = (await Session.messages({ sessionID: session.id }))
+        .flatMap((message) => message.parts)
+        .filter((part): part is MessageV2.ToolPart => part.type === "tool")
+      const compacted = (id: string) => {
+        const part = parts.find((candidate) => candidate.id === id)
+        return part?.state.status === "completed" ? part.state.time.compacted !== undefined : undefined
+      }
+      expect(ids.map(compacted)).toEqual([false, false, false, true, true, false])
+    })
+  })
 })
