@@ -5,31 +5,41 @@ export type PermissionReply = "once" | "session" | "project" | "always" | "rejec
 
 type Metadata = Record<string, any> | undefined
 
-function modalMachine(plan: Record<string, any>) {
-  const resources = plan.resources ?? {}
-  return [
-    plan.gpu === "none" ? "CPU" : `${plan.gpu} GPU`,
-    resources.cpus ? `${resources.cpus} CPU` : undefined,
-    resources.memory_gb ? `${resources.memory_gb} GB memory` : undefined,
-    plan.image,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join(" · ")
-}
+type Scope = { reply: Exclude<PermissionReply, "once" | "reject">; label: string; note?: string }
+type Action = { reply: PermissionReply; label: string }
 
-function computeDetails(plan: Record<string, any>) {
-  if (plan.provider === "modal") {
-    return [
-      ["Machine", modalMachine(plan)],
-      ["Timeout", `${plan.timeout_minutes} min`],
-      ["Network", plan.network === "none" ? "Blocked" : "Unrestricted"],
-    ]
-  }
-  return [
-    ["Host", `${plan.label} · ${plan.host}`],
-    ["Scheduler", plan.scheduler === "none" ? "Direct SSH" : String(plan.scheduler).toUpperCase()],
-    ["Host key", plan.fingerprint],
-  ]
+/**
+ * Every request the agent raises is described the same way before it is
+ * drawn: the thing being decided in one line, one quiet line of the facts a
+ * person judges it by, the full rows behind a disclosure, and the same three
+ * actions in the same order. The kinds differ in their words, not their shape.
+ */
+export type RequestModel = {
+  kind:
+    | "network"
+    | "folder"
+    | "fetch"
+    | "search"
+    | "remote-compute"
+    | "ssh"
+    | "environment-mutation"
+    | "study"
+    | "hosted-scientific"
+    | "generic"
+  title: string
+  subline?: string
+  rows: string[][]
+  /** What the person should know before allowing (inside Details). */
+  warning?: string
+  /** What each scope covers for this kind (inside Details). */
+  note?: string
+  primary: Action
+  /** A second one-off action beside the primary ("Only this request"). */
+  secondary?: Action
+  /** Standing scopes offered behind "Allow…"; none means the card is one-time. */
+  scopes: Scope[]
+  /** What choosing any scope adds, shown as the eyebrow while choosing. */
+  scopeNote?: string
 }
 
 function hostedScientificLabel(id: string) {
@@ -53,12 +63,19 @@ function hostedScientificLabel(id: string) {
     .join(" ")
 }
 
-function formatApprovalBytes(value: number) {
+export function formatApprovalBytes(value: number) {
   const bytes = Math.max(0, Math.trunc(value))
   const exact = new Intl.NumberFormat("en-US").format(bytes)
   if (!Number.isFinite(value) || bytes < 1024) return `${exact} bytes`
   if (bytes < 1024 * 1024) return `${Number((bytes / 1024).toFixed(1))} KB (${exact} bytes)`
   return `${Number((bytes / (1024 * 1024)).toFixed(1))} MB (${exact} bytes)`
+}
+
+function shortBytes(value: number) {
+  const bytes = Math.max(0, Math.trunc(value))
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${Number((bytes / (1024 * 1024)).toFixed(1))} MB`
 }
 
 function endpointHost(value: string) {
@@ -67,6 +84,11 @@ function endpointHost(value: string) {
   } catch {
     return value
   }
+}
+
+function minutesLabel(minutes: number) {
+  if (minutes % 60 === 0) return `${minutes / 60} h`
+  return `${minutes} min`
 }
 
 function hostedEgressRows(summary: Record<string, any>) {
@@ -100,6 +122,273 @@ function hostedEgressRows(summary: Record<string, any>) {
   return rows
 }
 
+function studyBudget(budget: Record<string, any> | undefined) {
+  if (!budget) return "no budget"
+  const parts = [
+    budget.maxRuns !== undefined ? `${budget.maxRuns} runs` : undefined,
+    budget.maxHours !== undefined ? `${budget.maxHours} h of compute` : undefined,
+    budget.maxCostUSD !== undefined ? `$${budget.maxCostUSD} of model spend` : undefined,
+    budget.target !== undefined ? `stop at ${budget.target}` : undefined,
+    budget.runMinutes !== undefined ? `${budget.runMinutes} min per run` : undefined,
+  ].filter((value): value is string => Boolean(value))
+  return parts.length ? parts.join(" · ") : "no budget"
+}
+
+function hostedScientific(metadata: Metadata) {
+  const scientific = metadata?.scientific_capability
+  return scientific?.provider === "nvidia" &&
+    scientific?.endpoint &&
+    scientific?.status_endpoint_template &&
+    scientific?.status_host &&
+    scientific?.api_schema_version &&
+    /^[a-f0-9]{64}$/u.test(scientific?.request_sha256 ?? "") &&
+    /^[a-f0-9]{64}$/u.test(scientific?.approval_sha256 ?? "") &&
+    Number.isSafeInteger(scientific?.payload_bytes) &&
+    scientific?.payload_bytes >= 0 &&
+    Array.isArray(scientific?.egress_summary?.input_kinds) &&
+    scientific?.egress_summary?.input_kinds.length > 0 &&
+    Array.isArray(scientific?.egress_summary?.scalar_parameters) &&
+    scientific?.terms_url &&
+    scientific?.method === "POST" &&
+    scientific?.warning
+    ? scientific
+    : undefined
+}
+
+type Labels = {
+  deny: string
+  allow: string
+  allowOnce: string
+  session: string
+  project: string
+  always: string
+  grantRead: (path: string) => string
+  grantWrite: (path: string) => string
+  allowHost: (host: string) => string
+  required: string
+}
+
+/** The words of one request, from the metadata the tool attached to it. */
+export function describeRequest(metadata: Metadata, labels: Labels): RequestModel {
+  const compute = metadata?.compute
+  const study = metadata?.study?.id && metadata?.study?.target ? metadata.study : undefined
+  const mutation = metadata?.environment_mutation
+  const hosted = hostedScientific(metadata)
+  const once: Action = { reply: "once", label: labels.allowOnce }
+  const standing = (notes?: Partial<Record<Scope["reply"], string>>): Scope[] => [
+    { reply: "session", label: labels.session, note: notes?.session },
+    { reply: "project", label: labels.project, note: notes?.project },
+    { reply: "always", label: labels.always, note: notes?.always },
+  ]
+
+  if (study) {
+    const target = study.target ?? {}
+    const where =
+      target.kind === "modal" ? `Modal${target.gpu ? ` · ${target.gpu} GPU` : ""}` : (target.kind ?? "a remote target")
+    const followUp = Number.isFinite(study.followUpMinutes) ? Number(study.followUpMinutes) : undefined
+    return {
+      kind: "study",
+      title: `Approve study: ${study.name ?? "Study"}`,
+      subline: [
+        where,
+        studyBudget(study.budget),
+        `${study.concurrency ?? 1} at a time`,
+        study.killCriteria ? `kill rule ${study.killCriteria}` : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      rows: [
+        ["Target", where],
+        ["Budget", studyBudget(study.budget)],
+        ["Concurrency", `${study.concurrency ?? 1} run${study.concurrency === 1 ? "" : "s"} at a time`],
+        ...(study.killCriteria ? [["Kill rule", String(study.killCriteria)]] : []),
+        ...(followUp !== undefined
+          ? [["Follow-up jobs", `up to ${minutesLabel(followUp)} of Modal time after the runs`]]
+          : []),
+      ],
+      warning:
+        target.kind === "modal"
+          ? "Runs in your Modal account, outside OpenScience's local sandbox, and may incur Modal charges until each run exits, is killed by the rule above, or reaches its timeout."
+          : "Runs on the saved remote target, outside OpenScience's local sandbox.",
+      note: `One approval covers every run this study dispatches inside its budget${
+        followUp !== undefined
+          ? `, and ${minutesLabel(followUp)} of follow-up Modal jobs such as the final refit and external baselines`
+          : ""
+      }; each dispatch is still recorded with its plan digest. Approving only this request makes the first run ask again.`,
+      primary: { reply: "session", label: "Approve study" },
+      secondary: { reply: "once", label: "Only this request" },
+      scopes: [{ reply: "project", label: labels.project, note: "Also for later conversations in this project" }],
+    }
+  }
+
+  if (hosted) {
+    return {
+      kind: "hosted-scientific",
+      title: `Send ${hostedScientificLabel(String(hosted.id))} request to NVIDIA`,
+      subline: `${shortBytes(hosted.payload_bytes)} leaves this device: ${hosted.egress_summary.input_kinds.join(", ")} · ${endpointHost(hosted.endpoint)}`,
+      rows: [
+        ["Provider", String(hosted.provider).toUpperCase()],
+        ["Request host", endpointHost(hosted.endpoint)],
+        ["Request endpoint", hosted.endpoint],
+        ["Status host", hosted.status_host],
+        ["Status endpoint", hosted.status_endpoint_template],
+        ["API schema", hosted.api_schema_version],
+        ["Method", hosted.method],
+        ["Payload exact", formatApprovalBytes(hosted.payload_bytes)],
+        ["Request SHA-256", hosted.request_sha256],
+        ...hostedEgressRows(hosted.egress_summary),
+        ["Terms", hosted.terms_url],
+      ],
+      warning: hosted.warning,
+      note: "This approval is one-time only. It is bound to this exact provider, request endpoint, status endpoint, API schema version, bounded data-egress summary, payload size, request hash, and terms URL. NVIDIA does not disclose a model-weight version here. It does not create standing host or provider access.",
+      primary: once,
+      scopes: [],
+    }
+  }
+
+  if (mutation?.plan_digest) {
+    const operation =
+      mutation.operation === "package_install"
+        ? "Install"
+        : mutation.operation === "package_remove"
+          ? "Remove"
+          : "Update"
+    const packages: string[] = Array.isArray(mutation.packages) ? mutation.packages.map(String) : []
+    const language = String(mutation.language ?? "").toUpperCase()
+    return {
+      kind: "environment-mutation",
+      title: packages.length
+        ? `${operation} ${packages.slice(0, 3).join(", ")}${packages.length > 3 ? ` +${packages.length - 3}` : ""} in the ${language} environment`
+        : `${operation} the ${language} environment`,
+      subline: [mutation.environment, mutation.manager, `${language} kernel restarts`].filter(Boolean).join(" · "),
+      rows: [
+        ["Language", language],
+        ["Environment", String(mutation.environment ?? "")],
+        ["Manager", String(mutation.manager ?? "")],
+        ...(packages.length ? [["Packages", packages.join(", ")]] : []),
+      ],
+      warning: mutation.warning,
+      note: "Every scope applies only to this exact requested change. A successful change restarts this environment and clears its in-memory state; files and execution history remain.",
+      primary: once,
+      scopes: standing(),
+    }
+  }
+
+  if (compute?.provider === "modal") {
+    const resources = compute.resources ?? {}
+    const allowance = compute.allowance?.proposed_minutes
+    const coveredBy = /^allowance:(\d+)$/.exec(String(compute.allowance?.covered_by ?? ""))
+    const covered = coveredBy
+      ? `covered; ${minutesLabel(Number(compute.allowance?.used_minutes ?? 0))} of ${minutesLabel(Number(coveredBy[1]))} used`
+      : undefined
+    const machine = [
+      compute.gpu === "none" ? "CPU" : `${compute.gpu} GPU`,
+      resources.cpus ? `${resources.cpus} CPU` : undefined,
+      resources.memory_gb ? `${resources.memory_gb} GB` : undefined,
+    ].filter(Boolean)
+    const plus = allowance ? ` · +${minutesLabel(allowance)}` : ""
+    return {
+      kind: "remote-compute",
+      title: `Run on Modal: ${compute.name ?? compute.purpose ?? "job"}`,
+      subline: [
+        ...machine,
+        `${compute.timeout_minutes} min`,
+        compute.network === "none" ? "no network" : "network on",
+        compute.upload_bytes ? `${shortBytes(compute.upload_bytes)} uploaded` : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      rows: [
+        ["Purpose", String(compute.purpose ?? "")],
+        ["Machine", [...machine, compute.image].filter(Boolean).join(" · ")],
+        ["Timeout", `${compute.timeout_minutes} min`],
+        ["Network", compute.network === "none" ? "Blocked" : "Unrestricted"],
+        ...(compute.command ? [["Command", String(compute.command)]] : []),
+        ...(Array.isArray(compute.uploads) && compute.uploads.length
+          ? [
+              [
+                "Uploads",
+                `${compute.uploads.length} file${compute.uploads.length === 1 ? "" : "s"} · ${shortBytes(compute.upload_bytes ?? 0)}`,
+              ],
+            ]
+          : []),
+        ...(covered !== undefined ? [["Allowance", covered]] : []),
+      ],
+      warning:
+        "Runs in your Modal account, outside OpenScience's local sandbox. It may incur Modal charges until the job exits, is cancelled, or reaches its timeout.",
+      note: allowance
+        ? `Allow once approves this exact plan. A conversation or project approval also allows further Modal jobs there, up to ${minutesLabel(allowance)} of job time in total (each job's timeout counts), then asks again.`
+        : "Every scope is bound to this exact plan, including its command, machine, image, network, and input file hashes.",
+      primary: once,
+      scopes: [
+        { reply: "session", label: `${labels.session}${plus}` },
+        { reply: "project", label: `${labels.project}${plus}` },
+        { reply: "always", label: `${labels.always}${plus}` },
+      ],
+      scopeNote: allowance ? `Each scope also allows up to ${minutesLabel(allowance)} of Modal jobs there` : undefined,
+    }
+  }
+
+  if (compute?.provider === "ssh") {
+    return {
+      kind: "ssh",
+      title: `Run on ${compute.label ?? compute.host ?? "a saved SSH host"}: ${compute.name ?? compute.purpose ?? "job"}`,
+      subline: [
+        compute.host,
+        compute.scheduler === "none" ? "direct SSH" : String(compute.scheduler ?? "").toUpperCase(),
+        compute.upload_bytes ? `${shortBytes(compute.upload_bytes)} uploaded` : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      rows: [
+        ["Purpose", String(compute.purpose ?? "")],
+        ["Host", `${compute.label} · ${compute.host}`],
+        ["Scheduler", compute.scheduler === "none" ? "Direct SSH" : String(compute.scheduler).toUpperCase()],
+        ["Host key", String(compute.fingerprint ?? "")],
+        ...(compute.command ? [["Command", String(compute.command)]] : []),
+      ],
+      warning: compute.warning,
+      note: "Every scope is bound to this exact plan, including its command, host, and input file hashes.",
+      primary: once,
+      scopes: standing(),
+    }
+  }
+
+  const filesystem = metadata?.filesystem
+  if (filesystem?.path) {
+    const write = filesystem.access === "write"
+    return {
+      kind: "folder",
+      title: write ? labels.grantWrite(filesystem.path) : labels.grantRead(filesystem.path),
+      rows: [],
+      note: "Folder access stays within this project, whichever scope you choose.",
+      primary: once,
+      scopes: standing().filter((scope) => scope.reply !== "always"),
+    }
+  }
+  const network = metadata?.network
+  if (network?.host) {
+    return {
+      kind: "network",
+      title: labels.allowHost(network.host),
+      subline: typeof metadata?.url === "string" && metadata.url.trim() ? metadata.url.trim() : undefined,
+      rows: [],
+      note: "Everywhere adds the host to the Network allow-list in settings.",
+      primary: once,
+      scopes: standing(),
+    }
+  }
+  const url = metadata?.url
+  if (typeof url === "string" && url.trim()) {
+    return { kind: "fetch", title: url.trim(), rows: [], primary: once, scopes: standing() }
+  }
+  const query = metadata?.query
+  if (typeof query === "string" && query.trim()) {
+    return { kind: "search", title: `“${query.trim()}”`, rows: [], primary: once, scopes: standing() }
+  }
+  return { kind: "generic", title: labels.required, rows: [], primary: once, scopes: standing() }
+}
+
 function el<K extends keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap>(
   tag: K,
   attrs: Record<string, string | boolean | undefined> = {},
@@ -124,16 +413,6 @@ function append(parent: Element, ...children: Array<Node | string | undefined>) 
     parent.appendChild(child instanceof Node ? child : document.createTextNode(child))
   }
   return parent
-}
-
-function setAttrs(node: Element, attrs: Record<string, string | boolean | undefined>) {
-  for (const attr of [...node.attributes]) node.removeAttribute(attr.name)
-  for (const [key, value] of Object.entries(attrs)) {
-    if (value === undefined || value === false) continue
-    if (value === true) node.setAttribute(key, "")
-    else node.setAttribute(key, value)
-  }
-  return node
 }
 
 function shieldIcon() {
@@ -162,13 +441,14 @@ function button(
   label: string,
   variant: "primary" | "secondary" | "ghost",
   onClick: () => void,
-  opts: { ref?: (element: HTMLButtonElement) => void; expanded?: boolean } = {},
+  opts: { ref?: (element: HTMLButtonElement) => void; expanded?: boolean; title?: string } = {},
 ) {
   const node = el("button", {
     type: "button",
     "data-component": "button",
     "data-size": "small",
     "data-variant": variant,
+    ...(opts.title ? { title: opts.title } : {}),
   }) as HTMLButtonElement
   if (opts.expanded !== undefined) node.setAttribute("aria-expanded", String(opts.expanded))
   node.textContent = label
@@ -177,71 +457,29 @@ function button(
   return node
 }
 
-function studyBudget(budget: Record<string, any> | undefined) {
-  if (!budget) return "no budget"
-  const parts = [
-    budget.maxRuns !== undefined ? `${budget.maxRuns} runs` : undefined,
-    budget.maxHours !== undefined ? `${budget.maxHours} h of compute` : undefined,
-    budget.maxCostUSD !== undefined ? `$${budget.maxCostUSD} of model spend` : undefined,
-    budget.target !== undefined ? `stop at ${budget.target}` : undefined,
-    budget.runMinutes !== undefined ? `${budget.runMinutes} min per run` : undefined,
-  ].filter((value): value is string => Boolean(value))
-  return parts.length ? parts.join(" · ") : "no budget"
-}
-
+/**
+ * The request card. One shape for every approval: the shield, an eyebrow
+ * naming the kind, the decision in one line, the facts in one quiet line, the
+ * rest behind Details, and Deny · Allow… · Allow once on the right. "Allow…"
+ * turns the row into the scopes; Cancel turns it back.
+ */
 export function PermissionActions(props: { respond: (response: PermissionReply) => void; metadata?: Metadata }) {
   const i18n = useI18n()
+  const model = describeRequest(props.metadata, {
+    deny: i18n.t("ui.permission.deny"),
+    allow: i18n.t("ui.permission.allow"),
+    allowOnce: i18n.t("ui.permission.allowOnce"),
+    session: i18n.t("ui.permission.allowSession"),
+    project: i18n.t("ui.permission.allowProject"),
+    always: i18n.t("ui.permission.allowAlways"),
+    grantRead: (path) => i18n.t("ui.permission.grantRead", { path }),
+    grantWrite: (path) => i18n.t("ui.permission.grantWrite", { path }),
+    allowHost: (host) => i18n.t("ui.permission.allowHost", { host }),
+    required: i18n.t("ui.permission.required"),
+  })
   let scopes = false
   let scopeTrigger: HTMLButtonElement | undefined
   let scopeBack: HTMLButtonElement | undefined
-  const compute = () => props.metadata?.compute
-  // A study asks once, before its first run, for every run it will dispatch
-  // inside its budget. The approval must be granted for the study's pattern
-  // (a session-scoped rule), not for this one request: "once" satisfies the
-  // create call and the first run asks again.
-  const study = () => (props.metadata?.study?.id && props.metadata?.study?.target ? props.metadata.study : undefined)
-  const mutation = () => props.metadata?.environment_mutation
-  const scientific = () => props.metadata?.scientific_capability
-  const hostedScientific = () =>
-    scientific()?.provider === "nvidia" &&
-    scientific()?.endpoint &&
-    scientific()?.status_endpoint_template &&
-    scientific()?.status_host &&
-    scientific()?.api_schema_version &&
-    /^[a-f0-9]{64}$/u.test(scientific()?.request_sha256 ?? "") &&
-    /^[a-f0-9]{64}$/u.test(scientific()?.approval_sha256 ?? "") &&
-    Number.isSafeInteger(scientific()?.payload_bytes) &&
-    scientific()?.payload_bytes >= 0 &&
-    Array.isArray(scientific()?.egress_summary?.input_kinds) &&
-    scientific()?.egress_summary?.input_kinds.length > 0 &&
-    Array.isArray(scientific()?.egress_summary?.scalar_parameters) &&
-    scientific()?.terms_url &&
-    scientific()?.method === "POST" &&
-    scientific()?.warning
-      ? scientific()
-      : undefined
-  const boundary = () => compute() ?? mutation()
-  const mutationOperation = () => {
-    const value = mutation()?.operation
-    if (value === "package_install") return "Install packages"
-    if (value === "package_remove") return "Remove packages"
-    return "Update environment"
-  }
-  const summary = () => {
-    const filesystem = props.metadata?.filesystem
-    if (filesystem?.path) {
-      const key = filesystem.access === "write" ? "ui.permission.grantWrite" : "ui.permission.grantRead"
-      return i18n.t(key, { path: filesystem.path })
-    }
-    const network = props.metadata?.network
-    if (network?.host) return i18n.t("ui.permission.allowHost", { host: network.host })
-    // A fetch prompt with no address is impossible to judge.
-    const url = props.metadata?.url
-    if (typeof url === "string" && url.trim()) return url.trim()
-    const query = props.metadata?.query
-    if (typeof query === "string" && query.trim()) return `“${query.trim()}”`
-    return undefined
-  }
   const root = el("div") as HTMLDivElement
 
   const setExpanded = (value: boolean, focus: "back" | "trigger" | undefined) => {
@@ -251,52 +489,35 @@ export function PermissionActions(props: { respond: (response: PermissionReply) 
     if (focus === "trigger") queueMicrotask(() => scopeTrigger?.focus())
   }
 
-  const renderActions = (special: boolean) => {
+  const renderActions = () => {
     const actions = el("div", {
-      "data-slot": "permission-actions",
+      "data-slot": "request-actions",
       role: "group",
-      "aria-label": mutation()
-        ? "Environment change approval scope"
-        : hostedScientific()
-          ? "Hosted scientific approval scope"
-          : special
-            ? "Remote compute approval scope"
-            : i18n.t("ui.permission.actions"),
+      "aria-label": scopes ? i18n.t("ui.permission.chooseScope") : i18n.t("ui.permission.actions"),
     })
-    if (scopes && !hostedScientific()) {
+    if (scopes) {
       append(
         actions,
         button(i18n.t("ui.common.cancel"), "ghost", () => setExpanded(false, "trigger"), {
           ref: (element) => (scopeBack = element),
         }),
-        button(i18n.t("ui.permission.allowSession"), "secondary", () => props.respond("session")),
-        button(i18n.t("ui.permission.allowProject"), "secondary", () => props.respond("project")),
+        ...model.scopes.map((scope) =>
+          button(scope.label, "secondary", () => props.respond(scope.reply), { title: scope.note }),
+        ),
       )
-      // Folder access stays within the project that approved it, so a
-      // machine-wide scope is not offered for filesystem prompts.
-      if (!props.metadata?.filesystem?.path) {
-        append(
-          actions,
-          button(special ? i18n.t("ui.permission.scopeGlobal") : i18n.t("ui.permission.allowAlways"), "secondary", () =>
-            props.respond("always"),
-          ),
-        )
-      }
       return actions
     }
     append(
       actions,
       button(i18n.t("ui.permission.deny"), "ghost", () => props.respond("reject")),
     )
-    if (!hostedScientific() && special) {
+    if (model.secondary) {
       append(
         actions,
-        button(i18n.t("ui.permission.allow"), "secondary", () => setExpanded(true, "back"), {
-          ref: (element) => (scopeTrigger = element),
-          expanded: scopes,
-        }),
+        button(model.secondary.label, "ghost", () => props.respond(model.secondary!.reply)),
       )
-    } else if (!special) {
+    }
+    if (model.scopes.length) {
       append(
         actions,
         button(i18n.t("ui.permission.allow"), "secondary", () => setExpanded(true, "back"), {
@@ -307,192 +528,47 @@ export function PermissionActions(props: { respond: (response: PermissionReply) 
     }
     append(
       actions,
-      button(
-        hostedScientific() || !special ? i18n.t("ui.permission.allowOnce") : i18n.t("ui.permission.scopeOnce"),
-        "primary",
-        () => props.respond("once"),
-      ),
+      button(model.primary.label, "primary", () => props.respond(model.primary.reply)),
     )
     return actions
   }
 
-  const renderFallback = () => {
-    setAttrs(root, {
-      "data-component": "permission-prompt",
-      "data-expanded": String(scopes),
-      "aria-label": i18n.t("ui.permission.required"),
-    })
-    const context = el("div", { "data-slot": "permission-context" })
-    const copy = el("div", { "data-slot": "permission-copy" })
-    const text = summary()
-    // The thing being approved is the headline; "Approval required" is the
-    // eyebrow above it. Without a summary the eyebrow carries the line.
+  const render = () => {
+    for (const attr of [...root.attributes]) root.removeAttribute(attr.name)
+    root.setAttribute("data-component", "request-card")
+    root.setAttribute("data-kind", model.kind)
+    root.setAttribute("data-expanded", String(scopes))
+    root.setAttribute("aria-label", `${i18n.t("ui.permission.required")}: ${model.title}`)
+
+    const head = el("div", { "data-slot": "request-head" })
+    const copy = el("div", { "data-slot": "request-copy" })
     append(
       copy,
       el(
         "span",
-        { "data-slot": "permission-origin", "data-primary": !text },
-        scopes ? i18n.t("ui.permission.chooseScope") : i18n.t("ui.permission.required"),
+        { "data-slot": "request-eyebrow" },
+        scopes
+          ? `${i18n.t("ui.permission.chooseScope")}${model.scopeNote ? ` · ${model.scopeNote}` : ""}`
+          : i18n.t("ui.permission.required"),
       ),
     )
-    if (text) append(copy, el("span", { "data-slot": "permission-summary", title: text }, text))
-    append(context, shieldIcon(), copy)
-    root.replaceChildren(context, renderActions(false))
-  }
+    append(copy, el("strong", { "data-slot": "request-title", title: model.title }, model.title))
+    if (model.subline) append(copy, el("span", { "data-slot": "request-subline", title: model.subline }, model.subline))
+    append(head, shieldIcon(), copy)
 
-  const renderSpecial = () => {
-    const special =
-      hostedScientific() ||
-      ((compute()?.provider === "modal" || compute()?.provider === "ssh") && compute()) ||
-      (mutation()?.plan_digest && mutation())
-    const kind = mutation() ? "environment-mutation" : hostedScientific() ? "hosted-scientific" : "remote-compute"
-    setAttrs(root, {
-      "data-component": "permission-prompt",
-      "data-kind": kind,
-      "data-expanded": String(scopes),
-    })
-    const origin = el("span", { "data-slot": "permission-origin" }, "OpenScience approval")
-    const summaryNode = el("div", { "data-slot": "permission-summary", "data-kind": kind })
-    const title = mutation()
-      ? `Change ${String(mutation().language).toUpperCase()} environment`
-      : hostedScientific()
-        ? "Send a hosted scientific request"
-        : boundary().provider === "modal"
-          ? "Run outside the local sandbox"
-          : "Run on a saved SSH host"
-    const purpose = mutation()
-      ? mutationOperation()
-      : hostedScientific()
-        ? `${hostedScientificLabel(String(hostedScientific().id))} via NVIDIA`
-        : boundary().purpose
-    append(summaryNode, el("strong", { "data-slot": "permission-compute-title" }, title))
-    append(summaryNode, el("span", { "data-slot": "permission-compute-purpose" }, purpose))
-    const details = el("div", {
-      "data-slot": "permission-compute-details",
-      "aria-label": mutation()
-        ? "Environment change details"
-        : hostedScientific()
-          ? "Hosted scientific request details"
-          : "Remote job details",
-    })
-    const rows = mutation()
-      ? [
-          ["Language", String(mutation().language).toUpperCase()],
-          ["Environment", mutation().environment],
-          ["Manager", mutation().manager],
-        ]
-      : hostedScientific()
-        ? [
-            ["Provider", hostedScientific().provider.toUpperCase()],
-            ["Request host", endpointHost(hostedScientific().endpoint)],
-            ["Request endpoint", hostedScientific().endpoint],
-            ["Status host", hostedScientific().status_host],
-            ["Status endpoint", hostedScientific().status_endpoint_template],
-            ["API schema", hostedScientific().api_schema_version],
-            ["Method", hostedScientific().method],
-            ["Payload exact", formatApprovalBytes(hostedScientific().payload_bytes)],
-            ["Request SHA-256", hostedScientific().request_sha256],
-            ...hostedEgressRows(hostedScientific().egress_summary),
-            ["Terms", hostedScientific().terms_url],
-          ]
-        : computeDetails(boundary())
-    for (const [label, value] of rows) {
-      append(details, el("span", {}, label), el("strong", {}, String(value)))
+    const hasDetails = model.rows.length > 0 || !!model.warning || !!model.note
+    const details = hasDetails ? el("details", { "data-slot": "request-details" }) : undefined
+    if (details) {
+      append(details, el("summary", {}, "Details"))
+      if (model.rows.length) {
+        const grid = el("div", { "data-slot": "request-rows" })
+        for (const [label, value] of model.rows) append(grid, el("span", {}, label), el("strong", {}, String(value)))
+        append(details, grid)
+      }
+      if (model.warning) append(details, el("p", { "data-slot": "request-warning" }, model.warning))
+      if (model.note) append(details, el("p", { "data-slot": "request-note" }, model.note))
     }
-    append(summaryNode, details)
-    append(
-      summaryNode,
-      el(
-        "span",
-        { "data-slot": "permission-compute-warning" },
-        mutation()
-          ? mutation().warning
-          : hostedScientific()
-            ? hostedScientific().warning
-            : boundary().provider === "modal"
-              ? "Runs in your Modal account, outside OpenScience's local sandbox. It may incur Modal charges until the job exits, is cancelled, or reaches its timeout."
-              : boundary().warning,
-      ),
-      el(
-        "span",
-        { "data-slot": "permission-compute-scope" },
-        mutation()
-          ? "Every scope applies only to this exact requested change. A successful change restarts this environment and clears its in-memory state; files and execution history remain."
-          : hostedScientific()
-            ? "This approval is one-time only. It is bound to this exact provider, request endpoint, status endpoint, API schema version, bounded data-egress summary, payload size, request hash, and terms URL. NVIDIA does not disclose a model-weight version here. It does not create standing host or provider access."
-            : "Every scope is bound to this exact plan, including its command, machine, image, network, and input file hashes.",
-      ),
-    )
-    root.replaceChildren(origin, summaryNode, renderActions(Boolean(special)))
-  }
-
-  const renderStudy = () => {
-    const value = study()!
-    const target = value.target ?? {}
-    setAttrs(root, {
-      "data-component": "permission-prompt",
-      "data-kind": "study",
-      "data-expanded": "false",
-    })
-    const origin = el("span", { "data-slot": "permission-origin" }, "OpenScience approval")
-    const summaryNode = el("div", { "data-slot": "permission-summary", "data-kind": "study" })
-    append(summaryNode, el("strong", { "data-slot": "permission-compute-title" }, "Approve this study's compute"))
-    append(
-      summaryNode,
-      el(
-        "span",
-        { "data-slot": "permission-compute-purpose" },
-        `${value.name ?? "Study"} on ${target.kind === "modal" ? `Modal${target.gpu ? ` · ${target.gpu} GPU` : ""}` : (target.kind ?? "a remote target")}`,
-      ),
-    )
-    const details = el("div", { "data-slot": "permission-compute-details", "aria-label": "Study details" })
-    const rows: string[][] = [
-      ["Budget", studyBudget(value.budget)],
-      ["Concurrency", `${value.concurrency ?? 1} run${value.concurrency === 1 ? "" : "s"} at a time`],
-      ...(value.killCriteria ? [["Kill rule", String(value.killCriteria)]] : []),
-    ]
-    for (const [label, text] of rows) append(details, el("span", {}, label), el("strong", {}, text))
-    append(summaryNode, details)
-    append(
-      summaryNode,
-      el(
-        "span",
-        { "data-slot": "permission-compute-warning" },
-        target.kind === "modal"
-          ? "Runs in your Modal account, outside OpenScience's local sandbox, and may incur Modal charges until each run exits, is killed by the rule above, or reaches its timeout."
-          : "Runs on the saved remote target, outside OpenScience's local sandbox.",
-      ),
-      el(
-        "span",
-        { "data-slot": "permission-compute-scope" },
-        "One approval covers every run this study dispatches inside that budget; each dispatch is still recorded with its plan digest, and nothing outside the study is granted. Approving only this request makes the first run ask again.",
-      ),
-    )
-    const actions = el("div", {
-      "data-slot": "permission-actions",
-      role: "group",
-      "aria-label": "Study approval",
-    })
-    append(
-      actions,
-      button(i18n.t("ui.permission.deny"), "ghost", () => props.respond("reject")),
-      button("Only this request", "secondary", () => props.respond("once")),
-      button("Approve this study", "primary", () => props.respond("session")),
-    )
-    root.replaceChildren(origin, summaryNode, actions)
-  }
-
-  const render = () => {
-    if (study()) {
-      renderStudy()
-      return
-    }
-    const special =
-      ((compute()?.provider === "modal" || compute()?.provider === "ssh") && compute()) ||
-      (mutation()?.plan_digest && mutation()) ||
-      hostedScientific()
-    if (special) renderSpecial()
-    else renderFallback()
+    root.replaceChildren(head, ...(details ? [details] : []), renderActions())
   }
 
   render()

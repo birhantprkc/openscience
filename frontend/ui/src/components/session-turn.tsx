@@ -453,6 +453,13 @@ function SessionErrorNotice(props: { error: unknown; sessionID: string; messageI
   )
 }
 
+/** The first sentence of a retry message, without a parenthesised code: the
+ * line says what is happening; the tooltip keeps the whole text. */
+export function retryReason(message: string) {
+  const sentence = message.replace(/\s*\([A-Z][A-Z0-9_]+\)/g, "").split(/(?<=[.!?])\s+/)[0] ?? message
+  return sentence.replace(/[.:]\s*$/, "")
+}
+
 export function SessionTurn(
   props: ParentProps<{
     sessionID: string
@@ -1064,14 +1071,18 @@ export function SessionTurn(
                             <span data-slot="session-turn-trigger-label">
                               <Switch>
                                 <Match when={working() && retry()}>
-                                  <span data-slot="session-turn-retry-message">{retry()?.message}</span>
+                                  {/* The state first, the reason second and short; the full
+                                      message waits in the tooltip rather than on the line. */}
                                   <span data-slot="session-turn-retry-seconds">
-                                    · {i18n.t("ui.sessionTurn.retry.retrying")}
+                                    {i18n.t("ui.sessionTurn.retry.retrying")}
+                                    {(retry()?.attempt ?? 1) > 1 ? ` (${retry()?.attempt})` : ""}
                                     {store.retrySeconds > 0
                                       ? " " + i18n.t("ui.sessionTurn.retry.inSeconds", { seconds: store.retrySeconds })
                                       : ""}
                                   </span>
-                                  <span data-slot="session-turn-retry-attempt">(#{retry()?.attempt})</span>
+                                  <span data-slot="session-turn-retry-message" title={retry()?.message}>
+                                    · {retryReason(retry()?.message ?? "")}
+                                  </span>
                                 </Match>
                                 <Match when={working()}>
                                   <span data-slot="session-turn-status-text">{statusText()}</span>

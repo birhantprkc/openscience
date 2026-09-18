@@ -522,6 +522,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       },
   )
   const working = createMemo(() => status()?.type !== "idle")
+  // A background worker outlives the turn that dispatched it: the lead is
+  // idle and the composer open while the worker's report is still on its
+  // way, arriving as a new turn. Say so where the person is about to type.
+  const backgroundWorkers = createMemo(() => {
+    const sessionID = params.id
+    if (!sessionID || working()) return 0
+    let count = 0
+    for (const message of sync.data.message[sessionID] ?? []) {
+      if (message.role !== "assistant") continue
+      for (const part of sync.data.part[message.id] ?? []) {
+        if (part.type !== "tool" || part.tool !== "task" || part.state.status !== "completed") continue
+        const metadata = part.state.metadata as { background?: boolean; outcome?: string; jobId?: string } | undefined
+        if (metadata?.background !== true || metadata.outcome !== undefined || !metadata.jobId) continue
+        const child = sync.data.session_status[metadata.jobId]
+        if (child && child.type !== "idle") count++
+      }
+    }
+    return count
+  })
   const imageAttachments = createMemo(
     () => prompt.current().filter((part) => part.type === "image") as ImageAttachmentPart[],
   )
@@ -558,6 +577,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Enter adds to the running turn; only the button and Esc stop it, so a
     // message typed mid-turn is never lost to an accidental abort.
     if (working() && !store.intent && commentCount() === 0) return language.t("prompt.placeholder.working")
+    if (backgroundWorkers() > 0 && !store.intent && commentCount() === 0)
+      return language.t(
+        backgroundWorkers() === 1 ? "prompt.placeholder.backgroundWorker" : "prompt.placeholder.backgroundWorkers",
+        { count: backgroundWorkers() },
+      )
     if (store.intent === "plan") return "Describe your task to generate a plan…"
     if (store.intent === "goal") return "Describe your goal and the measurable outcome…"
     if (commentCount() > 1) return language.t("prompt.placeholder.summarizeComments")

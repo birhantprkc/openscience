@@ -1763,8 +1763,8 @@ describe("collapsed activity safeguards", () => {
       },
     }
     const host = mount(() => turn.SessionTurn({ sessionID, messageID: user.id }), store)
-    await ready(() => host.querySelector('[data-component="question-prompt"]') !== null)
-    const prompt = host.querySelector('[data-component="question-prompt"]')!
+    await ready(() => host.querySelector('[data-component="request-card"][data-kind="question"]') !== null)
+    const prompt = host.querySelector('[data-component="request-card"][data-kind="question"]')!
     const options = prompt.querySelectorAll<HTMLButtonElement>('[data-slot="question-option"]')
     options[0].click()
     options[options.length - 1].click()
@@ -1779,8 +1779,8 @@ describe("collapsed activity safeguards", () => {
     for (const expanded of [false, true, false]) {
       toggle.click()
       await ready(() => toggle.getAttribute("aria-expanded") === String(expanded))
-      expect(host.querySelectorAll('[data-component="question-prompt"]')).toHaveLength(1)
-      expect(host.querySelector('[data-component="question-prompt"]')).toBe(prompt)
+      expect(host.querySelectorAll('[data-component="request-card"][data-kind="question"]')).toHaveLength(1)
+      expect(host.querySelector('[data-component="request-card"][data-kind="question"]')).toBe(prompt)
       expect(prompt.closest('[data-component="tool-part-wrapper"]')).toBe(tool)
       expect(input.isConnected).toBe(true)
       expect(prompt.querySelector('[data-slot="custom-input"]')).toBe(input)
@@ -1884,8 +1884,8 @@ describe("delegated request visibility", () => {
       },
     }
     const host = mount(() => turn.SessionTurn({ sessionID, messageID: user.id }), store)
-    await ready(() => host.querySelector('[data-component="question-prompt"]') !== null)
-    const prompt = host.querySelector('[data-component="question-prompt"]')!
+    await ready(() => host.querySelector('[data-component="request-card"][data-kind="question"]') !== null)
+    const prompt = host.querySelector('[data-component="request-card"][data-kind="question"]')!
     const options = prompt.querySelectorAll<HTMLButtonElement>('[data-slot="question-option"]')
     options[0].click()
     options[options.length - 1].click()
@@ -1898,8 +1898,8 @@ describe("delegated request visibility", () => {
     for (const expanded of [false, true, false]) {
       toggle.click()
       await ready(() => toggle.getAttribute("aria-expanded") === String(expanded))
-      expect(host.querySelectorAll('[data-component="question-prompt"]')).toHaveLength(1)
-      expect(host.querySelector('[data-component="question-prompt"]')).toBe(prompt)
+      expect(host.querySelectorAll('[data-component="request-card"][data-kind="question"]')).toHaveLength(1)
+      expect(host.querySelector('[data-component="request-card"][data-kind="question"]')).toBe(prompt)
       expect(prompt.querySelector('[data-slot="custom-input"]')).toBe(input)
       expect(input.isConnected).toBe(true)
       expect(input.value).toBe("Match the instrument calibration")
@@ -1932,9 +1932,9 @@ describe("delegated request visibility", () => {
         tool: { messageID: "msg_child_read", callID: "call_child_read" },
       },
     ])
-    await ready(() => host.querySelector('[data-component="permission-prompt"]') !== null)
-    const permission = host.querySelector('[data-component="permission-prompt"]')!
-    expect(host.querySelectorAll('[data-component="permission-prompt"]')).toHaveLength(1)
+    await ready(() => host.querySelector('[data-component="request-card"]:not([data-kind="question"])') !== null)
+    const permission = host.querySelector('[data-component="request-card"]:not([data-kind="question"])')!
+    expect(host.querySelectorAll('[data-component="request-card"]:not([data-kind="question"])')).toHaveLength(1)
     expect(permission.textContent).toContain("/research/control.csv")
     expect(permission.querySelectorAll("button").length).toBeGreaterThan(0)
     expect(
@@ -1943,7 +1943,7 @@ describe("delegated request visibility", () => {
     expect(store.permission?.[sessionID]).toBeUndefined()
 
     setStore("permission", childID, [])
-    await ready(() => host.querySelector('[data-component="permission-prompt"]') === null)
+    await ready(() => host.querySelector('[data-component="request-card"]:not([data-kind="question"])') === null)
     expect(host.querySelector('[data-component="tool-part-wrapper"]')).toBeNull()
     expect(store.part[message.id][0].type).toBe("tool")
   })
@@ -2090,14 +2090,20 @@ describe("trace control", () => {
         type: "retry",
         attempt: 2,
         next: Date.now() + 10_000,
-        message: "Reconnecting to the provider",
+        message:
+          "Ace's gateway could not deliver this request to the model service (ROUTER_EXTERNAL_TARGET_ERROR). This happens when the request is too large. Retry; if it fails again, downscale images first.",
       }),
     )
     await ready(() => host.querySelector('[data-slot="session-turn-retry-message"]') !== null)
+    // The state leads and the reason is one short sentence without its code;
+    // the whole message waits in the tooltip.
+    expect(host.querySelector('[data-slot="session-turn-retry-seconds"]')?.textContent).toMatch(/^retrying \(2\)/)
     expect(host.querySelector('[data-slot="session-turn-retry-message"]')?.textContent).toBe(
-      "Reconnecting to the provider",
+      "· Ace's gateway could not deliver this request to the model service",
     )
-    expect(host.querySelector('[data-slot="session-turn-retry-attempt"]')?.textContent).toBe("(#2)")
+    expect(host.querySelector('[data-slot="session-turn-retry-message"]')?.getAttribute("title")).toContain(
+      "ROUTER_EXTERNAL_TARGET_ERROR",
+    )
     const button = toggle(host)
     expect(button.querySelector('[data-component="spinner"]')).not.toBeNull()
     expect(button.getAttribute("aria-expanded")).toBe("true")

@@ -1399,11 +1399,13 @@ export namespace ProviderTransform {
     if (error.statusCode !== 502 || !isAtlasProxyURL(error.url)) return
     const code = error.responseHeaders?.["x-vercel-error"] ?? error.responseBody?.match(/ROUTER_[A-Z_0-9]+/)?.[0]
     if (!code) return
+    // The sentence a person reads leads; the router code a support ticket
+    // needs comes last, where the UI sets it apart as a detail.
     return (
-      `Ace's gateway could not deliver this request to the model service (${code}). ` +
+      `Ace's gateway could not deliver this request to the model service. ` +
       `This happens when the request is too large for the gateway, most often several images in recent tool results, ` +
       `or when the service is restarting. Retry; if it fails again, continue without re-reading large images, ` +
-      `or downscale them first.`
+      `or downscale them first. Gateway code ${code}.`
     )
   }
 

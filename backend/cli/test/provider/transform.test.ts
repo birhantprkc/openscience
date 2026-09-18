@@ -2555,8 +2555,9 @@ describe("ProviderTransform.error for the managed gateway's edge proxy", () => {
         "x-vercel-error": "ROUTER_EXTERNAL_TARGET_CONNECTION_ERROR_CD8",
       }),
     )
-    expect(text).toContain("Ace's gateway could not deliver this request")
-    expect(text).toContain("ROUTER_EXTERNAL_TARGET_CONNECTION_ERROR_CD8")
+    expect(text).toStartWith("Ace's gateway could not deliver this request to the model service. ")
+    // The code closes the message as a detail rather than interrupting the sentence.
+    expect(text).toEndWith("Gateway code ROUTER_EXTERNAL_TARGET_CONNECTION_ERROR_CD8.")
     expect(text).toContain("several images")
     expect(text).not.toContain("An error occurred with this application")
   })

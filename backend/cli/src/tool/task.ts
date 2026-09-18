@@ -320,6 +320,7 @@ const BACKGROUND_STARTED = [
   "The task is working in the background. You will be notified automatically when it finishes.",
   "Do not sleep, poll for progress, ask the task for status, or duplicate its work; avoid the files and topics it is using.",
   "Work on non-overlapping tasks, or briefly tell the user what you launched and end your response.",
+  "When you end a response while this worker is still running, say so in one line and say that its report will arrive as a new turn; do not describe work that depends on its result as done.",
 ].join("\n")
 
 /** Background children in flight, by child session id, so a completion can
@@ -618,7 +619,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
                       : taskOutcome.stopReason === "empty_handoff"
                         ? "The subagent ended without a textual handoff; treat this result as incomplete."
                         : failedToolCalls > 0
-                          ? `${failedToolCalls} of ${summary.length} tool calls failed along the way; the report below is the worker's own account.`
+                          ? `${failedToolCalls} of ${summary.length} tool calls failed along the way; the report is the worker's own account.`
                           : undefined
           const body = [
             text || `(no text; ${summary.length} tool calls in this turn)`,

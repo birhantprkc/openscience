@@ -2286,7 +2286,20 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
   }
 
   return (
-    <div data-component="question-prompt">
+    <div
+      data-component="request-card"
+      data-kind="question"
+      aria-label={`${i18n.t("ui.question.eyebrow")}: ${question()?.header ?? ""}`}
+    >
+      <div data-slot="request-head">
+        <Icon name="help" size="small" />
+        <div data-slot="request-copy">
+          <span data-slot="request-eyebrow">{i18n.t("ui.question.eyebrow")}</span>
+          <Show when={single() && question()?.header}>
+            {(header) => <strong data-slot="request-title">{header()}</strong>}
+          </Show>
+        </div>
+      </div>
       <Show when={!single()}>
         <div data-slot="question-tabs">
           <For each={questions()}>
@@ -2426,7 +2439,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
       </Show>
 
       <div data-slot="question-actions">
-        <Button variant="secondary" size="small" onClick={reject}>
+        <Button variant="ghost" size="small" onClick={reject}>
           {i18n.t("ui.common.dismiss")}
         </Button>
         <Show when={!single()}>

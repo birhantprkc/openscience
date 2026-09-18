@@ -317,10 +317,22 @@
   display: flex;
   align-items: start;
   gap: 8px;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-large);
 
   [data-slot="icon-svg"] {
     color: var(--icon-critical-base);
     margin-top: 4px;
+  }
+
+  [data-slot="message-part-tool-error-title"] {
+    color: var(--text-on-critical-base);
+    font-weight: var(--font-weight-medium);
+  }
+
+  [data-slot="message-part-tool-error-message"] {
+    color: var(--text-weak);
+    overflow-wrap: anywhere;
   }
 
   [data-slot="message-part-tool-error-content"] {
@@ -1449,66 +1461,138 @@
  * controls are compact so the card stays the height of two text lines. The
  * wrapper already carries the warning frame; nothing here adds a second one.
  */
-[data-component="permission-prompt"] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  min-height: 40px;
-  padding: 7px 8px 7px 10px;
+/* One card for every request the agent raises — an approval or a question.
+   The shield and an eyebrow name the kind, the decision sits in one line with
+   one quiet line of facts beneath it, everything else waits behind Details,
+   and the actions keep one order on the right: Deny · Allow… · Allow once.
+   "Allow…" turns the action row into the scopes; Cancel turns it back. */
+[data-component="request-card"] {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 10px 12px;
   border-top: 1px solid var(--border-weaker-base);
 
-  [data-slot="permission-context"] {
+  [data-slot="request-head"] {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 10px;
     min-width: 0;
-    flex: 1 1 240px;
 
     [data-component="icon"] {
       flex: 0 0 auto;
+      margin-top: 2px;
       color: var(--icon-warning-base);
     }
   }
 
-  [data-slot="permission-copy"] {
+  [data-slot="request-copy"] {
     display: grid;
-    align-items: start;
-    gap: 0;
+    gap: 2px;
     min-width: 0;
   }
 
-  [data-slot="permission-origin"] {
+  [data-slot="request-eyebrow"] {
     color: var(--text-weaker);
     font-size: var(--font-size-x-small);
     line-height: 14px;
-
-    &[data-primary] {
-      color: var(--text-base);
-      font-size: var(--font-size-small);
-      font-weight: var(--font-weight-medium);
-      line-height: 18px;
-    }
+    letter-spacing: 0.01em;
   }
 
-  [data-slot="permission-summary"] {
+  [data-slot="request-title"] {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text-base);
+    color: var(--text-strong);
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-medium);
     line-height: 18px;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
   }
 
-  [data-slot="permission-actions"] {
+  [data-slot="request-subline"] {
+    min-width: 0;
+    color: var(--text-weak);
+    font-size: var(--font-size-x-small);
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  [data-slot="request-details"] {
+    margin-left: 26px;
+    font-size: var(--font-size-x-small);
+    line-height: 16px;
+
+    > summary {
+      width: fit-content;
+      color: var(--text-weak);
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &::before {
+        content: "▸";
+        display: inline-block;
+        width: 10px;
+        margin-right: 4px;
+        color: var(--text-weaker);
+        transition: transform 0.15s;
+      }
+
+      &:hover {
+        color: var(--text-base);
+      }
+    }
+
+    &[open] > summary::before {
+      transform: rotate(90deg);
+    }
+
+    > * + * {
+      margin-top: 6px;
+    }
+  }
+
+  [data-slot="request-rows"] {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 3px 12px;
+    font-variant-numeric: tabular-nums;
+
+    > span {
+      color: var(--text-weak);
+    }
+
+    > strong {
+      min-width: 0;
+      color: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  [data-slot="request-warning"],
+  [data-slot="request-note"] {
+    margin: 0;
+    color: var(--text-weak);
+    text-wrap: pretty;
+  }
+
+  [data-slot="request-warning"] {
+    color: var(--text-base);
+  }
+
+  [data-slot="request-actions"],
+  [data-slot="question-actions"] {
     display: flex;
     align-items: center;
-    gap: 6px;
     justify-content: flex-end;
     flex-wrap: wrap;
+    gap: 6px;
     margin-left: auto;
 
     [data-component="button"][data-size="small"] {
@@ -1529,89 +1613,36 @@
     }
   }
 
-  [data-slot="permission-summary"][data-kind="remote-compute"],
-  [data-slot="permission-summary"][data-kind="hosted-scientific"],
-  [data-slot="permission-summary"][data-kind="environment-mutation"],
-  [data-slot="permission-summary"][data-kind="study"] {
-    display: grid;
-    gap: 5px;
-    white-space: normal;
-    font-weight: var(--font-weight-regular);
-  }
+  /* A one-line request (a host, a folder) keeps the row shape: copy left,
+     actions right, nothing to disclose. */
+  &:not(:has([data-slot="request-details"])):not([data-kind="question"]) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 16px;
+    min-height: 40px;
+    padding-block: 7px;
 
-  [data-slot="permission-compute-title"] {
-    color: var(--text-strong);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-emphasis);
-  }
-
-  [data-slot="permission-compute-purpose"] {
-    color: var(--text-base);
-    line-height: 1.45;
-    text-wrap: pretty;
-  }
-
-  [data-slot="permission-compute-details"] {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: 3px 10px;
-    padding-block: 2px;
-    font-variant-numeric: tabular-nums;
-
-    > span {
-      color: var(--text-weak);
+    [data-slot="request-head"] {
+      align-items: center;
     }
 
-    > strong {
-      min-width: 0;
-      color: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      overflow-wrap: anywhere;
-    }
-  }
-
-  [data-slot="permission-compute-warning"] {
-    color: var(--text-base);
-    line-height: 1.45;
-    text-wrap: pretty;
-  }
-
-  [data-slot="permission-compute-scope"] {
-    color: var(--text-weak);
-    font-size: var(--font-size-x-small);
-    line-height: 1.45;
-    text-wrap: pretty;
-  }
-
-  &[data-kind="remote-compute"],
-  &[data-kind="hosted-scientific"],
-  &[data-kind="environment-mutation"],
-  &[data-kind="study"] {
-    align-items: stretch;
-    flex-direction: column;
-    min-height: 0;
-    padding: 10px 12px;
-    border-top: 0;
-
-    [data-slot="permission-origin"] {
-      color: var(--text-weaker);
-      font-size: var(--font-size-x-small);
-    }
-
-    [data-slot="permission-actions"] {
-      gap: 6px;
-      align-self: flex-end;
+    [data-slot="request-head"] [data-component="icon"] {
+      margin-top: 0;
     }
   }
 }
 
 @media (max-width: 560px) {
-  [data-component="permission-prompt"] [data-slot="permission-actions"] {
+  [data-component="request-card"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-component="request-card"] [data-slot="request-actions"] {
     width: 100%;
     justify-content: stretch;
   }
 
-  [data-component="permission-prompt"] [data-slot="permission-actions"] [data-component="button"] {
+  [data-component="request-card"] [data-slot="request-actions"] [data-component="button"] {
     flex: 1 1 auto;
     min-height: 32px;
   }
@@ -1621,12 +1652,10 @@
    prose level, choices as rows with a radio mark, the free-text choice as one
    more row, and one real button to dismiss. Three type levels, no boxes in
    boxes, and the same 4px rhythm as the rest of the trace. */
-[data-component="question-prompt"] {
+[data-component="request-card"][data-kind="question"] {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 12px 12px;
-  border-top: 1px solid var(--border-weaker-base);
 
   [data-slot="question-tabs"] {
     display: flex;
@@ -1861,7 +1890,16 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
+
+    [data-component="button"][data-size="small"] {
+      height: 24px;
+      min-height: 24px;
+      padding: 0 8px;
+      font-size: var(--font-size-small);
+      line-height: 24px;
+      border-radius: var(--radius-xs);
+    }
   }
 }
 
