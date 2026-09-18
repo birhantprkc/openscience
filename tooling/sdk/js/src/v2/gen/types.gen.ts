@@ -5710,6 +5710,7 @@ export type SettingsComputeJobsListResponses = {
         path: string
         size: number
         sha256: string
+        named?: boolean
       }>
       upload_bytes: number
       approval: string
@@ -6530,6 +6531,7 @@ export type SettingsComputeJobsStartResponses = {
         path: string
         size: number
         sha256: string
+        named?: boolean
       }>
       upload_bytes: number
       approval: string
@@ -6699,6 +6701,7 @@ export type SettingsComputeJobsPlanResponses = {
           path: string
           size: number
           sha256: string
+          named?: boolean
         }>
         upload_bytes: number
         outputs: Array<string>
@@ -7559,6 +7562,7 @@ export type SettingsComputeJobsRetryResponses = {
         path: string
         size: number
         sha256: string
+        named?: boolean
       }>
       upload_bytes: number
       approval: string
@@ -8333,6 +8337,7 @@ export type SettingsComputeJobsReleaseResponses = {
         path: string
         size: number
         sha256: string
+        named?: boolean
       }>
       upload_bytes: number
       approval: string
@@ -9103,6 +9108,7 @@ export type SettingsComputeJobsCancelResponses = {
         path: string
         size: number
         sha256: string
+        named?: boolean
       }>
       upload_bytes: number
       approval: string

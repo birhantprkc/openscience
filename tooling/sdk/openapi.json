@@ -9528,6 +9528,9 @@
                                 },
                                 "sha256": {
                                   "type": "string"
+                                },
+                                "named": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -12171,6 +12174,9 @@
                               },
                               "sha256": {
                                 "type": "string"
+                              },
+                              "named": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -12884,6 +12890,9 @@
                                 "type": "string",
                                 "minLength": 64,
                                 "maxLength": 64
+                              },
+                              "named": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -15984,6 +15993,9 @@
                               },
                               "sha256": {
                                 "type": "string"
+                              },
+                              "named": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -18656,6 +18668,9 @@
                               },
                               "sha256": {
                                 "type": "string"
+                              },
+                              "named": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -21328,6 +21343,9 @@
                               },
                               "sha256": {
                                 "type": "string"
+                              },
+                              "named": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
