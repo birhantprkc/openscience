@@ -617,6 +617,59 @@ export namespace SessionFilesystem {
     return stored
   }
 
+  /**
+   * The lead reads what its worker left in the worker's own scratch. A
+   * delegated child keeps side outputs (staged inputs, rendered pages, tool
+   * output files) in its isolated workspace; without this grant the parent's
+   * transcript shows those files but cannot open them. Read only, session
+   * scoped, and only from a direct child in the same project.
+   */
+  export async function shareWorkerScratch(input: { parentSessionID: string; childSessionID: string }) {
+    const [parent, child] = await Promise.all([ensure(input.parentSessionID), ensure(input.childSessionID)])
+    const source = isolated(child)
+    const target = isolated(parent)
+    if (
+      !source ||
+      !target ||
+      source.root !== target.root ||
+      source.workspace === target.workspace ||
+      path.basename(source.workspace) !== input.childSessionID ||
+      path.basename(target.workspace) !== input.parentSessionID ||
+      parent.projectID !== child.projectID ||
+      parent.directory !== child.directory
+    ) {
+      return
+    }
+    const grant: Grant = {
+      id: `fsg_${crypto.randomUUID()}`,
+      path: source.workspace,
+      access: "read",
+      scope: "session",
+      source: "handoff",
+      time: { created: Date.now() },
+    }
+    const result = await Storage.update<State>(key(input.parentSessionID), (draft) => {
+      const duplicate = draft.grants.find(
+        (item) =>
+          item.source === "handoff" &&
+          item.path === source.workspace &&
+          item.access === "read" &&
+          item.scope === "session" &&
+          !item.time.revoked,
+      )
+      if (duplicate) {
+        grant.id = duplicate.id
+        grant.time = duplicate.time
+        return
+      }
+      draft.grants.push(grant)
+      draft.revision++
+    })
+    const stored = result.grants.find((item) => item.id === grant.id) ?? grant
+    await changed(input.parentSessionID, Instance.project.id, stored)
+    return stored
+  }
+
   /** Internal exact-file capability for app-managed truncated tool output. */
   /**
    * A delegated child works in its parent's directory: the same tool working

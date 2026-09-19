@@ -1013,16 +1013,14 @@ function ConnectorForm(props: {
           <h3>{props.editing ? "Edit connector" : `Add ${props.state.type} connector`}</h3>
         </div>
       </div>
-      <div class="connectors-form">
+      <div class="settings-card settings-form-card connectors-form">
         <div class="connectors-form__lead">
-          <div>
-            <strong>{props.state.type === "remote" ? "Remote MCP server" : "Local MCP process"}</strong>
-            <p>
-              {props.state.type === "remote"
-                ? "Connect over HTTPS and authenticate with OAuth or headers."
-                : "Launch a trusted command and pass environment values locally."}
-            </p>
-          </div>
+          <strong>{props.state.type === "remote" ? "Remote MCP server" : "Local MCP process"}</strong>
+          <p>
+            {props.state.type === "remote"
+              ? "Connect over HTTPS and authenticate with OAuth or headers."
+              : "Launch a trusted command and pass environment values locally."}
+          </p>
         </div>
         <div class="connectors-form__grid">
           <div class="connectors-form__field">
@@ -1138,12 +1136,12 @@ function ConnectorForm(props: {
           </Show>
         </div>
         <div class="connectors-form__actions">
+          <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
           <FormButton
             label={props.busy ? "Saving…" : props.editing ? "Save connector" : "Add connector"}
             disabled={props.busy}
             onClick={props.onSave}
           />
-          <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
         </div>
         <Show when={props.state.initiallyDisabled && !props.editing}>
           <p class="connectors-form__hint">

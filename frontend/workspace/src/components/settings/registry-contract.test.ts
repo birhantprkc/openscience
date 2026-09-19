@@ -47,12 +47,7 @@ describe("settings registry source contract", () => {
       "Sandbox",
       "Storage",
     ])
-    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual([
-      "Account",
-      "Inference",
-      "Capabilities",
-      "Runtime",
-    ])
+    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(["Account", "Models", "Research", "System"])
     expect(SETTINGS_PANELS.every((panel) => "parent" in panel === false)).toBe(true)
   })
 

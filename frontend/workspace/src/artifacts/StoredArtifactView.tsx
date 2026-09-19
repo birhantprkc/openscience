@@ -19,6 +19,7 @@ import { IconDownload, IconEdit, IconFile, IconMoreH, IconTrash } from "@/atlas/
 import { toast } from "@/atlas/Toast"
 import { uiStore } from "@/atlas/store/ui"
 import { PdfViewer } from "@/science/renderers/documents/PdfViewer"
+import { FileChromeProvider, useFileChrome } from "@/atlas/file-chrome"
 import { moveStoredArtifactMenuFocus } from "@/artifacts/stored-artifact-menu"
 import { TextContentView } from "@/atlas/files/TextContentView"
 import { resolveViewer } from "@/atlas/files/viewer-registry"
@@ -179,134 +180,163 @@ export function StoredArtifactView(props: { artifact: StoredArtifact }): JSX.Ele
   }
 
   return (
-    <div
-      class="atlas-file-view atlas-stored-artifact"
-      role="region"
-      aria-label={`Saved Result ${props.artifact.title}`}
-      style={{
-        flex: 1,
-        "min-height": 0,
-        display: "flex",
-        "flex-direction": "column",
-        background: "var(--color-surface-solid)",
-        "font-family": FONT_SANS,
-      }}
-    >
-      <header style={header()}>
-        <span style={fileIcon()}>
-          <IconFile size={18} strokeWidth={1.5} />
-        </span>
-        <span style={{ flex: 1, "min-width": 0 }}>
-          <strong style={title()}>{record()?.title ?? props.artifact.title}</strong>
-          <span style={meta()}>
-            {label(selected(), record()?.kind ?? props.artifact.kind)} ·{" "}
-            {size(selected()?.size ?? props.artifact.current.size)}
+    <FileChromeProvider>
+      <div
+        class="atlas-file-view atlas-stored-artifact"
+        role="region"
+        aria-label={`Saved Result ${props.artifact.title}`}
+        style={{
+          flex: 1,
+          "min-height": 0,
+          display: "flex",
+          "flex-direction": "column",
+          background: "var(--color-surface-solid)",
+          "font-family": FONT_SANS,
+        }}
+      >
+        <header style={header()}>
+          <span style={fileIcon()}>
+            <IconFile size={18} strokeWidth={1.5} />
           </span>
-        </span>
-        <Show when={selected()}>
-          {(version) => (
+          <span style={{ flex: 1, "min-width": 0 }}>
+            <strong style={title()}>{record()?.title ?? props.artifact.title}</strong>
+            <span style={meta()}>
+              {label(selected(), record()?.kind ?? props.artifact.kind)} ·{" "}
+              {size(selected()?.size ?? props.artifact.current.size)}
+            </span>
+          </span>
+          <ViewerControlsSlot />
+          <Show when={selected()}>
+            {(version) => (
+              <Button
+                type="button"
+                size="small"
+                variant="secondary"
+                disabled={downloading()}
+                onClick={() => void download(version())}
+              >
+                <IconDownload size={14} strokeWidth={1.5} />
+                {downloading() ? "Downloading…" : "Download"}
+              </Button>
+            )}
+          </Show>
+          <span style={actionAnchor()}>
             <Button
+              ref={actionTrigger}
               type="button"
               size="small"
               variant="secondary"
-              disabled={downloading()}
-              onClick={() => void download(version())}
+              aria-label="Manage result"
+              aria-haspopup="menu"
+              aria-expanded={action() !== undefined}
+              onClick={() => (action() ? closeActions() : setAction("menu"))}
             >
-              <IconDownload size={14} strokeWidth={1.5} />
-              {downloading() ? "Downloading…" : "Download"}
+              <IconMoreH size={14} strokeWidth={1.5} />
+              Manage
             </Button>
-          )}
-        </Show>
-        <span style={actionAnchor()}>
-          <Button
-            ref={actionTrigger}
-            type="button"
-            size="small"
-            variant="secondary"
-            aria-label="Manage result"
-            aria-haspopup="menu"
-            aria-expanded={action() !== undefined}
-            onClick={() => (action() ? closeActions() : setAction("menu"))}
-          >
-            <IconMoreH size={14} strokeWidth={1.5} />
-            Manage
-          </Button>
 
-          <Show when={action()}>
-            {(current) => (
-              <>
-                <button
-                  type="button"
-                  tabindex={-1}
-                  aria-hidden="true"
-                  style={actionScrim()}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => closeActions(true)}
-                />
-                <section
-                  ref={actionPanelElement}
-                  aria-label="Result actions"
-                  role={current() === "menu" ? "menu" : "dialog"}
-                  style={actionPanel()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") {
+            <Show when={action()}>
+              {(current) => (
+                <>
+                  <button
+                    type="button"
+                    tabindex={-1}
+                    aria-hidden="true"
+                    style={actionScrim()}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => closeActions(true)}
+                  />
+                  <section
+                    ref={actionPanelElement}
+                    aria-label="Result actions"
+                    role={current() === "menu" ? "menu" : "dialog"}
+                    style={actionPanel()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        event.preventDefault()
+                        closeActions(true)
+                        return
+                      }
+                      if (current() !== "menu") return
+                      if (!moveStoredArtifactMenuFocus(event.currentTarget, event.target, event.key)) return
                       event.preventDefault()
-                      closeActions(true)
-                      return
-                    }
-                    if (current() !== "menu") return
-                    if (!moveStoredArtifactMenuFocus(event.currentTarget, event.target, event.key)) return
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                  onFocusOut={(event) => {
-                    if (current() !== "menu") return
-                    const next = event.relatedTarget
-                    if (next instanceof Node && event.currentTarget.contains(next)) return
-                    closeActions()
-                  }}
-                >
-                  <Switch>
-                    <Match when={current() === "menu"}>
-                      <Button
-                        type="button"
-                        size="small"
-                        variant="ghost"
-                        role="menuitem"
-                        tabindex={0}
-                        style={menuItem()}
-                        onClick={() => setAction("rename")}
-                      >
-                        <IconEdit size={14} strokeWidth={1.5} />
-                        Rename
-                      </Button>
-                      <Button
-                        type="button"
-                        size="small"
-                        variant="ghost"
-                        role="menuitem"
-                        tabindex={-1}
-                        style={{ ...menuItem(), ...dangerText() }}
-                        onClick={() => setAction("delete")}
-                      >
-                        <IconTrash size={14} strokeWidth={1.5} />
-                        Move to trash
-                      </Button>
-                    </Match>
-                    <Match when={current() === "rename"}>
-                      <form onSubmit={rename} style={actionForm()}>
-                        <strong style={heading()}>Rename result</strong>
-                        <TextField
-                          type="text"
-                          label="Result name"
-                          value={name()}
-                          onChange={setName}
-                          maxlength={240}
-                          autofocus
-                        />
+                      event.stopPropagation()
+                    }}
+                    onFocusOut={(event) => {
+                      if (current() !== "menu") return
+                      const next = event.relatedTarget
+                      if (next instanceof Node && event.currentTarget.contains(next)) return
+                      closeActions()
+                    }}
+                  >
+                    <Switch>
+                      <Match when={current() === "menu"}>
+                        <Button
+                          type="button"
+                          size="small"
+                          variant="ghost"
+                          role="menuitem"
+                          tabindex={0}
+                          style={menuItem()}
+                          onClick={() => setAction("rename")}
+                        >
+                          <IconEdit size={14} strokeWidth={1.5} />
+                          Rename
+                        </Button>
+                        <Button
+                          type="button"
+                          size="small"
+                          variant="ghost"
+                          role="menuitem"
+                          tabindex={-1}
+                          style={{ ...menuItem(), ...dangerText() }}
+                          onClick={() => setAction("delete")}
+                        >
+                          <IconTrash size={14} strokeWidth={1.5} />
+                          Move to trash
+                        </Button>
+                      </Match>
+                      <Match when={current() === "rename"}>
+                        <form onSubmit={rename} style={actionForm()}>
+                          <strong style={heading()}>Rename result</strong>
+                          <TextField
+                            type="text"
+                            label="Result name"
+                            value={name()}
+                            onChange={setName}
+                            maxlength={240}
+                            autofocus
+                          />
+                          <div style={actionRow()}>
+                            <Button type="submit" size="small" variant="primary" disabled={!name().trim() || busy()}>
+                              {busy() ? "Saving…" : "Save name"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="ghost"
+                              onClick={() => setAction("menu")}
+                              disabled={busy()}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </Match>
+                      <Match when={current() === "delete"}>
+                        <strong style={heading()}>Move to Trash?</strong>
+                        <p style={copy()}>The Result stays recoverable from Files for 30 days.</p>
                         <div style={actionRow()}>
-                          <Button type="submit" size="small" variant="primary" disabled={!name().trim() || busy()}>
-                            {busy() ? "Saving…" : "Save name"}
+                          <Button
+                            type="button"
+                            size="small"
+                            variant="secondary"
+                            onClick={remove}
+                            disabled={busy()}
+                            style={dangerText()}
+                          >
+                            <IconTrash size={14} strokeWidth={1.5} />
+                            {busy() ? "Moving…" : "Move to trash"}
                           </Button>
                           <Button
                             type="button"
@@ -318,69 +348,43 @@ export function StoredArtifactView(props: { artifact: StoredArtifact }): JSX.Ele
                             Cancel
                           </Button>
                         </div>
-                      </form>
-                    </Match>
-                    <Match when={current() === "delete"}>
-                      <strong style={heading()}>Move to Trash?</strong>
-                      <p style={copy()}>The Result stays recoverable from Files for 30 days.</p>
-                      <div style={actionRow()}>
-                        <Button
-                          type="button"
-                          size="small"
-                          variant="secondary"
-                          onClick={remove}
-                          disabled={busy()}
-                          style={dangerText()}
-                        >
-                          <IconTrash size={14} strokeWidth={1.5} />
-                          {busy() ? "Moving…" : "Move to trash"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="small"
-                          variant="ghost"
-                          onClick={() => setAction("menu")}
-                          disabled={busy()}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </Match>
-                  </Switch>
-                </section>
-              </>
-            )}
-          </Show>
-        </span>
-      </header>
+                      </Match>
+                    </Switch>
+                  </section>
+                </>
+              )}
+            </Show>
+          </span>
+        </header>
 
-      <div class="atlas-scroll" style={body(previewData()?.kind === "pdf")}>
-        <Show when={!detail.loading} fallback={<p style={empty()}>Loading immutable record…</p>}>
-          <Show
-            when={!detail.error && selected()}
-            fallback={
-              <section class="atlas-file-error" role="alert">
-                <h2>Couldn’t open this file</h2>
-                <p>{detail.error instanceof Error ? detail.error.message : "Artifact record unavailable."}</p>
-                <Button type="button" size="small" variant="secondary" onClick={() => void detailActions.refetch()}>
-                  Retry
-                </Button>
-              </section>
-            }
-          >
-            {(version) => (
-              <Preview
-                version={version()}
-                data={previewData()}
-                loading={preview.loading}
-                error={preview.error}
-                onRetry={() => void previewActions.refetch()}
-              />
-            )}
+        <div class="atlas-scroll" style={body(previewData()?.kind === "pdf")}>
+          <Show when={!detail.loading} fallback={<p style={empty()}>Loading immutable record…</p>}>
+            <Show
+              when={!detail.error && selected()}
+              fallback={
+                <section class="atlas-file-error" role="alert">
+                  <h2>Couldn’t open this file</h2>
+                  <p>{detail.error instanceof Error ? detail.error.message : "Artifact record unavailable."}</p>
+                  <Button type="button" size="small" variant="secondary" onClick={() => void detailActions.refetch()}>
+                    Retry
+                  </Button>
+                </section>
+              }
+            >
+              {(version) => (
+                <Preview
+                  version={version()}
+                  data={previewData()}
+                  loading={preview.loading}
+                  error={preview.error}
+                  onRetry={() => void previewActions.refetch()}
+                />
+              )}
+            </Show>
           </Show>
-        </Show>
+        </div>
       </div>
-    </div>
+    </FileChromeProvider>
   )
 }
 
@@ -567,6 +571,18 @@ const actionForm = (): JSX.CSSProperties => ({
 const dangerText = (): JSX.CSSProperties => ({ color: "var(--color-text-on-error)" })
 // A PDF brings its own scrolling body and fills the pane; everything else
 // scrolls here.
+/** The header's slot for the active viewer's controls (a PDF's pager and zoom). */
+function ViewerControlsSlot() {
+  const chrome = useFileChrome()
+  return (
+    <span
+      class="atlas-file-viewer-controls"
+      data-slot="file-viewer-controls"
+      ref={(element) => chrome?.setSlot(element)}
+    />
+  )
+}
+
 const body = (pdf = false): JSX.CSSProperties =>
   pdf
     ? { flex: 1, "min-height": 0, display: "flex", "flex-direction": "column", overflow: "hidden" }

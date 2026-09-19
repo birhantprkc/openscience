@@ -268,6 +268,8 @@ const LocalModels: Component = () => {
   const [found, setFound] = createSignal<string[]>([])
   const [selected, setSelected] = createSignal<Set<string>>(new Set<string>())
   const [listedUrl, setListedUrl] = createSignal("")
+  const [sshOpen, setSshOpen] = createSignal(false)
+  const [directOpen, setDirectOpen] = createSignal(false)
   const [sshHost, setSshHost] = createSignal("")
   const [sshRemotePort, setSshRemotePort] = createSignal("11434")
   const [sshLocalPort, setSshLocalPort] = createSignal("12434")
@@ -646,59 +648,78 @@ const LocalModels: Component = () => {
           title="Connect over SSH"
           description="Open an encrypted local-forward to a model server on a remote GPU. The host must already work with your SSH config and keys."
         >
-          <div class="settings-card settings-form-card">
-            <div class="settings-form-grid">
-              <Field
-                label="SSH host"
-                span="full"
-                placeholder="research-gpu or user@gpu.example.org"
-                value={sshHost()}
-                onInput={setSshHost}
+          <Card>
+            <div class="settings-row">
+              <RowCopy
+                title="Remote GPU over SSH"
+                description="Tunnel a model server on a host from your SSH config into this machine."
               />
-              <Field
-                label="Remote model port"
-                type="number"
-                min="1"
-                max="65535"
-                placeholder="11434"
-                value={sshRemotePort()}
-                onInput={setSshRemotePort}
-              />
-              <Field
-                label="Local tunnel port"
-                type="number"
-                min="1024"
-                max="65535"
-                placeholder="12434"
-                value={sshLocalPort()}
-                onInput={setSshLocalPort}
-              />
-              <Field
-                label="Endpoint key (optional)"
-                span="full"
-                type="password"
-                placeholder="Only if the remote model server requires one"
-                value={sshKey()}
-                onInput={setSshKey}
-              />
-            </div>
-            <ContextField
-              value={context()}
-              onInput={setContext}
-              description="How much context OpenScience may send to the remote models. Match the server's configured window."
-            />
-            <div class="flex justify-end">
               <Button
                 size="small"
-                variant="primary"
-                class="settings-panel-action"
-                disabled={busy() || !sshHost().trim()}
-                onClick={connectSSH}
+                variant="secondary"
+                class="settings-panel-action ml-auto shrink-0"
+                aria-expanded={sshOpen()}
+                onClick={() => setSshOpen((value) => !value)}
               >
-                Connect models
+                {sshOpen() ? "Cancel" : "Connect"}
               </Button>
             </div>
-          </div>
+          </Card>
+          <Show when={sshOpen()}>
+            <div class="settings-card settings-form-card">
+              <div class="settings-form-grid">
+                <Field
+                  label="SSH host"
+                  span="full"
+                  placeholder="research-gpu or user@gpu.example.org"
+                  value={sshHost()}
+                  onInput={setSshHost}
+                />
+                <Field
+                  label="Remote model port"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  placeholder="11434"
+                  value={sshRemotePort()}
+                  onInput={setSshRemotePort}
+                />
+                <Field
+                  label="Local tunnel port"
+                  type="number"
+                  min="1024"
+                  max="65535"
+                  placeholder="12434"
+                  value={sshLocalPort()}
+                  onInput={setSshLocalPort}
+                />
+                <Field
+                  label="Endpoint key (optional)"
+                  span="full"
+                  type="password"
+                  placeholder="Only if the remote model server requires one"
+                  value={sshKey()}
+                  onInput={setSshKey}
+                />
+              </div>
+              <ContextField
+                value={context()}
+                onInput={setContext}
+                description="How much context OpenScience may send to the remote models. Match the server's configured window."
+              />
+              <div class="flex justify-end">
+                <Button
+                  size="small"
+                  variant="primary"
+                  class="settings-panel-action"
+                  disabled={busy() || !sshHost().trim()}
+                  onClick={connectSSH}
+                >
+                  Connect models
+                </Button>
+              </div>
+            </div>
+          </Show>
         </Section>
 
         {/* ── Custom endpoint ── */}
@@ -706,69 +727,88 @@ const LocalModels: Component = () => {
           title="Direct endpoint"
           description="Connect a local, LAN, VPN, or HTTPS OpenAI-compatible endpoint directly."
         >
-          <div class="settings-card settings-form-card">
-            <div class="settings-form-grid">
-              <Field
-                label="Endpoint URL"
-                span="full"
-                inputMode="url"
-                placeholder="http://localhost:11434/v1"
-                value={url()}
-                onInput={setUrl}
+          <Card>
+            <div class="settings-row">
+              <RowCopy
+                title="OpenAI-compatible endpoint"
+                description="A URL on this machine, your LAN or VPN, or over HTTPS."
               />
-              <Field
-                label="API key (optional)"
-                span="full"
-                type="password"
-                placeholder="Most local servers need none"
-                value={key()}
-                onInput={setKey}
-              />
-            </div>
-            <div class="flex flex-wrap justify-end gap-2">
               <Button
                 size="small"
                 variant="secondary"
-                class="settings-panel-action"
-                disabled={busy() || !url().trim()}
-                onClick={listCustom}
+                class="settings-panel-action ml-auto shrink-0"
+                aria-expanded={directOpen()}
+                onClick={() => setDirectOpen((value) => !value)}
               >
-                List models
+                {directOpen() ? "Cancel" : "Connect"}
               </Button>
-              <Show when={found().length > 0}>
+            </div>
+          </Card>
+          <Show when={directOpen()}>
+            <div class="settings-card settings-form-card">
+              <div class="settings-form-grid">
+                <Field
+                  label="Endpoint URL"
+                  span="full"
+                  inputMode="url"
+                  placeholder="http://localhost:11434/v1"
+                  value={url()}
+                  onInput={setUrl}
+                />
+                <Field
+                  label="API key (optional)"
+                  span="full"
+                  type="password"
+                  placeholder="Most local servers need none"
+                  value={key()}
+                  onInput={setKey}
+                />
+              </div>
+              <div class="flex flex-wrap justify-end gap-2">
                 <Button
                   size="small"
-                  variant="primary"
+                  variant="secondary"
                   class="settings-panel-action"
-                  disabled={busy() || selected().size === 0}
-                  onClick={addCustom}
+                  disabled={busy() || !url().trim()}
+                  onClick={listCustom}
                 >
-                  Add {selected().size} selected
+                  List models
                 </Button>
+                <Show when={found().length > 0}>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    class="settings-panel-action"
+                    disabled={busy() || selected().size === 0}
+                    onClick={addCustom}
+                  >
+                    Add {selected().size} selected
+                  </Button>
+                </Show>
+              </div>
+              <Show when={found().length > 0}>
+                <div class="flex flex-col gap-1">
+                  <span class="text-12-regular text-text-weak">{listedUrl()}</span>
+                  <For each={found()}>
+                    {(m) => (
+                      <Checkbox checked={selected().has(m)} onChange={() => toggle(m)}>
+                        <span class="min-w-0 truncate text-12-regular">{m}</span>
+                      </Checkbox>
+                    )}
+                  </For>
+                </div>
+                <ContextField
+                  value={context()}
+                  onInput={setContext}
+                  description={
+                    isOllama(undefined, listedUrl())
+                      ? "Applied to the selected models as a tuned Ollama alias. Larger windows use more memory."
+                      : "How much context OpenScience may send to these models. Match the server's configured window; this does not change the server itself."
+                  }
+                />
               </Show>
             </div>
-            <Show when={found().length > 0}>
-              <div class="flex flex-col gap-1">
-                <span class="text-12-regular text-text-weak">{listedUrl()}</span>
-                <For each={found()}>
-                  {(m) => (
-                    <Checkbox checked={selected().has(m)} onChange={() => toggle(m)}>
-                      <span class="min-w-0 truncate text-12-regular">{m}</span>
-                    </Checkbox>
-                  )}
-                </For>
-              </div>
-              <ContextField
-                value={context()}
-                onInput={setContext}
-                description={
-                  isOllama(undefined, listedUrl())
-                    ? "Applied to the selected models as a tuned Ollama alias. Larger windows use more memory."
-                    : "How much context OpenScience may send to these models. Match the server's configured window; this does not change the server itself."
-                }
-              />
-            </Show>
-          </div>
+          </Show>
         </Section>
 
         {/* ── Configured ── */}

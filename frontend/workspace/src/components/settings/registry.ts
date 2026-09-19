@@ -156,9 +156,9 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: "app", label: "Account" },
-  { id: "inference", label: "Inference" },
-  { id: "capabilities", label: "Capabilities" },
-  { id: "runtime", label: "Runtime" },
+  { id: "inference", label: "Models" },
+  { id: "capabilities", label: "Research" },
+  { id: "runtime", label: "System" },
 ]
 
 export function findPanel(id: SettingsPanelId): SettingsPanel {

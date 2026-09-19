@@ -276,6 +276,39 @@ describe("Task tool contract", () => {
     })
   })
 
+  test("the lead reads its worker's own scratch, so a report's side outputs open from the lead's transcript", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const parent = await Session.create({ workspace: "isolated" })
+        const stranger = await Session.create({ workspace: "isolated" })
+        const child = await Session.create({ parentID: parent.id, workspace: "isolated" })
+        await SessionFilesystem.shareWorkingDirectory({ parentSessionID: parent.id, childSessionID: child.id })
+        await SessionFilesystem.shareWorkerScratch({ parentSessionID: parent.id, childSessionID: child.id })
+        const workerScratch = (await SessionFilesystem.list(child.id)).find(
+          (grant) => grant.source === "workspace",
+        )!.path
+        const side = path.join(workerScratch, "figures", "page-1.png")
+        expect(await SessionFilesystem.allows({ sessionID: parent.id, path: side, access: "read" })).toBe(true)
+        await expect(
+          SessionFilesystem.allows({ sessionID: parent.id, path: side, access: "write" }),
+        ).rejects.toBeInstanceOf(SessionFilesystem.DeniedError)
+        // Only a direct child's scratch; another session's stays private.
+        const other = (await SessionFilesystem.list(stranger.id)).find((grant) => grant.source === "workspace")!.path
+        await expect(
+          SessionFilesystem.allows({ sessionID: parent.id, path: path.join(other, "notes.md"), access: "read" }),
+        ).rejects.toBeInstanceOf(SessionFilesystem.DeniedError)
+        // Granting twice keeps one grant.
+        await SessionFilesystem.shareWorkerScratch({ parentSessionID: parent.id, childSessionID: child.id })
+        const handoffs = (await SessionFilesystem.list(parent.id)).filter(
+          (grant) => grant.source === "handoff" && grant.path === workerScratch,
+        )
+        expect(handoffs).toHaveLength(1)
+      },
+    })
+  })
+
   test("many children dispatch at once: there is no concurrency cap", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({

@@ -10,6 +10,7 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
+- **Customize forms and sub-sections share one recipe.** The connector form, SSH host form, and Local models' SSH and direct-endpoint forms are the same bordered form card with 28px controls and right-aligned actions; the two Local models forms open from a row instead of sitting open. The rail names its groups (Account, Models, Research, System).
 - **Every Customize tab reads like General.** One row grammar across all thirteen tabs: General's 12px medium title, one muted line beneath it, a 20px brand mark or glyph at the left where a row has one, and one control at the right. Tags, pills, counts, header buttons and monospace titles are gone; statuses are plain text and titles sit on the content's left edge.
 - **Direct hosting for Ace OpenAI and Google models.** GPT-6 Astra, GPT-5.6 Sol/Terra/Luna, and graph embeddings use Azure. Gemini chat and Nano Banana Pro use Google's Gemini API. The gateway preserves existing model selections and applies the provider token rates plus the existing funding fee. Rates identify the host; Fast is unavailable on these routes. Nano Banana returns PNG. Direct API-key and ChatGPT connections remain available.
 - **Compute approvals are bounded by time, not bound to one plan.** A Modal
@@ -60,6 +61,8 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Fixed
 
+- **Files a worker leaves in its own scratch open from the lead's transcript.** The lead session now holds read access to each delegated child's workspace, so a report's side outputs (rendered pages, staged inputs, tool output files) open instead of failing silently.
+- **One PDF viewer.** A saved Result's PDF shows its pager and zoom in the file header like every other file view, and the viewer's own bar, where it still appears inline in chat, matches that header.
 - **A declined reload card is named.** When Ace pauses because the Wallet's card was declined, the message says so and points at the card update instead of "the last charge failed recently" or a reload that never completes.
 - **Full access no longer asks for kernel package installs.** `pip install`
   through the shell ran without a card under Full access while the same

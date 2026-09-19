@@ -233,10 +233,10 @@ const SETTINGS_STYLES = `
   flex: 0 0 auto;
   padding: var(--settings-space-1) var(--settings-space-2) var(--settings-space-4);
   color: var(--color-text);
-  font-size: 15px;
+  font-size: var(--settings-type-title);
   font-weight: var(--font-weight-medium);
-  line-height: 22px;
-  letter-spacing: -0.012em;
+  line-height: var(--settings-leading-title);
+  letter-spacing: -0.015em;
 }
 .settings-nav__scroll-button {
   display: none;
@@ -249,14 +249,24 @@ const SETTINGS_STYLES = `
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--settings-space-3);
-  padding-top: 2px;
+  gap: var(--settings-space-4);
+  padding-top: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .settings-nav__sections::-webkit-scrollbar {
   display: none;
+}
+/* Each group is named once, in the section-label voice, above its rows. */
+.settings-nav__label {
+  padding: 0 var(--settings-space-2) 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  line-height: 16px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 .settings-nav__section {
   display: flex;
@@ -771,8 +781,8 @@ const SETTINGS_STYLES = `
 .settings-form-card {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: var(--settings-space-5);
+  gap: var(--settings-space-4);
+  padding: var(--settings-space-4);
 }
 .settings-row {
   min-height: 48px;
@@ -1031,12 +1041,13 @@ const SETTINGS_STYLES = `
   resize: vertical;
 }
 .settings-button {
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--settings-radius-control);
   color: var(--color-text);
-  font-size: var(--settings-type-body);
+  font-size: var(--settings-type-helper);
   font-weight: var(--font-weight-medium);
   transition:
     background 140ms ease,
@@ -1788,6 +1799,9 @@ export const DialogSettings: Component<{ initial?: SettingsPanelId }> = (props) 
               <For each={SETTINGS_SECTIONS}>
                 {(section) => (
                   <div class="settings-nav__section" role="group" aria-label={section.label}>
+                    <div class="settings-nav__label" aria-hidden="true">
+                      {section.label}
+                    </div>
                     <For each={SETTINGS_PANELS.filter((p) => p.section === section.id)}>
                       {(panel) => (
                         <button

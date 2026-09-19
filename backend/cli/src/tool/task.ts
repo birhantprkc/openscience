@@ -458,6 +458,9 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       // works in the parent's directory: the files it writes there are the
       // parent's deliverables.
       await SessionFilesystem.shareWorkingDirectory({ parentSessionID: ctx.sessionID, childSessionID: session.id })
+      // And the parent reads the child's scratch, so the files a worker's
+      // report names can be opened from the lead's transcript.
+      await SessionFilesystem.shareWorkerScratch({ parentSessionID: ctx.sessionID, childSessionID: session.id })
 
       const metadata = {
         sessionId: session.id,

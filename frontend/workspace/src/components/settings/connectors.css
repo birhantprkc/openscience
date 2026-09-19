@@ -13,15 +13,6 @@
   gap: 12px;
 }
 
-.settings-dialog .connectors-panel .settings-card {
-  gap: 0;
-  padding: 4px;
-  border: 0;
-  border-radius: var(--settings-radius-card);
-  background: var(--settings-surface);
-  box-shadow: none;
-}
-
 .connectors-panel .settings-toolbar {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;
@@ -531,25 +522,35 @@
 }
 
 .connectors-form__lead strong {
+  display: block;
   color: var(--color-text);
-  font-size: var(--font-size-medium);
+  font-size: var(--settings-type-row);
   font-weight: var(--font-weight-medium);
-  line-height: 18px;
+  line-height: var(--settings-leading-body);
 }
 
 .connectors-form__lead p {
   margin: 2px 0 0;
   color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-  line-height: 18px;
+  font-size: var(--settings-type-helper);
+  line-height: var(--settings-leading-helper);
   text-wrap: pretty;
 }
 
-.connectors-empty__actions,
+.connectors-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The form's buttons sit at the right, the confirming one last, as every
+   settings form's do. */
 .connectors-form__actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -560,12 +561,7 @@
 }
 
 .connectors-form__lead {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border-weak);
+  min-width: 0;
 }
 
 .connectors-form__grid {

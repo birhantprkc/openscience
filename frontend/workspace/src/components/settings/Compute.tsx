@@ -1180,9 +1180,9 @@ const Compute: Component = () => {
 
               <Show when={configHosts().length > 0}>
                 <div class="settings-compute-config-import">
-                  <div class="settings-compute-config-import__heading">
+                  <div class="settings-section-heading">
                     <div>
-                      <h4>From ~/.ssh/config</h4>
+                      <h3>From ~/.ssh/config</h3>
                       <p>
                         Literal host entries only, plus bounded Includes. Imports safe identity files and ProxyJump
                         values; Match blocks are ignored and proxy commands are never evaluated.
@@ -1235,7 +1235,7 @@ const Compute: Component = () => {
 
               <Show when={adding()}>
                 <form
-                  class="settings-card settings-form-card grid gap-5"
+                  class="settings-card settings-form-card"
                   onSubmit={(event) => {
                     event.preventDefault()
                     void add()
