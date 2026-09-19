@@ -57,6 +57,7 @@ const SETTINGS_STYLES = `
   --settings-type-title: 16px;
   --settings-type-heading: 12px;
   --settings-type-body: 13px;
+  --settings-type-row: 14px;
   --settings-type-helper: 12px;
   --settings-leading-title: 22px;
   --settings-leading-body: 20px;
@@ -285,7 +286,7 @@ const SETTINGS_STYLES = `
     transform 120ms ease;
 }
 .settings-nav__item:hover {
-  background: var(--settings-surface-hover);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
   color: var(--color-text);
 }
 .settings-nav__item[data-active="true"] {
@@ -522,6 +523,20 @@ const SETTINGS_STYLES = `
 .settings-inline-link:focus-visible {
   color: var(--color-text);
 }
+/* An inline link is text: it does not take a control's height. */
+.settings-dialog .settings-inline-link,
+.settings-dialog .settings-inline-link:not(:disabled) {
+  min-height: 0;
+  height: auto;
+  display: inline;
+  line-height: inherit;
+  vertical-align: baseline;
+  color: var(--color-text-muted);
+  transform: none;
+}
+.settings-dialog .settings-inline-link:hover {
+  color: var(--color-text);
+}
 [data-login-approval] {
   margin: var(--settings-space-2) 0 0;
 }
@@ -548,7 +563,9 @@ const SETTINGS_STYLES = `
 }
 .settings-page-header__inner {
   display: flex;
-  width: min(100%, 900px);
+  /* The body is a 900px box with 32px padding; its content is 836px wide
+     and the title sits on the same left edge. */
+  width: min(100%, 836px);
   flex-direction: column;
   gap: var(--settings-space-1);
   margin-inline: auto;
@@ -609,9 +626,7 @@ const SETTINGS_STYLES = `
   line-height: var(--settings-leading-helper);
 }
 .settings-section-heading > span {
-  flex: 0 0 auto;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  display: none;
 }
 .settings-section-heading--compact {
   min-height: 20px;
@@ -628,12 +643,12 @@ const SETTINGS_STYLES = `
   border-top: 1px solid var(--settings-border);
 }
 .settings-list-row {
-  min-height: 56px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   gap: var(--settings-space-3);
-  padding: 10px var(--settings-space-3);
-  border-radius: var(--settings-radius-control);
+  padding: 8px var(--settings-space-3);
+  border-radius: 0;
 }
 .settings-list-copy {
   min-width: 0;
@@ -644,7 +659,7 @@ const SETTINGS_STYLES = `
 }
 .settings-list-copy strong {
   color: var(--color-text);
-  font-size: var(--settings-type-body);
+  font-size: var(--settings-type-row);
   font-weight: var(--font-weight-medium);
   line-height: var(--settings-leading-body);
 }
@@ -740,8 +755,18 @@ const SETTINGS_STYLES = `
 /* Rows inside one card are separated by hairlines, not by padding. */
 .settings-card > .settings-row + .settings-row,
 .settings-card > .settings-list-item + .settings-list-item,
-.settings-card > .settings-preference-row + .settings-preference-row {
+.settings-card > .settings-preference-row + .settings-preference-row,
+.settings-card > .settings-row + .settings-card-empty,
+.settings-card > .settings-row + .settings-list-item,
+.settings-card > .settings-list-item + .settings-row {
   border-top: 1px solid var(--settings-border);
+}
+/* A field inside a row is the same height as the row's button. */
+.settings-card .settings-row .settings-field:not(.settings-field--multiline) {
+  min-height: 28px;
+  height: 28px;
+  padding-block: 0;
+  font-size: var(--settings-type-helper);
 }
 .settings-form-card {
   display: flex;
@@ -933,8 +958,8 @@ const SETTINGS_STYLES = `
 }
 .settings-control {
   min-width: 0;
-  min-height: 32px;
-  height: 32px;
+  min-height: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -970,12 +995,16 @@ const SETTINGS_STYLES = `
   background: var(--settings-surface-active);
 }
 .settings-control--primary {
-  border-color: var(--color-border-weak);
-  background: var(--settings-primary);
-  color: var(--settings-on-primary);
+  border-color: transparent;
+  background: var(--settings-surface-muted);
+  color: var(--color-text);
 }
-.settings-control--primary:hover {
-  background: var(--settings-primary-hover);
+.settings-control--primary:hover,
+.settings-control--primary[data-expanded] {
+  background: var(--settings-surface-hover);
+}
+.settings-control--primary [data-component="icon"] {
+  color: currentColor;
 }
 .settings-field {
   width: 100%;
@@ -1062,27 +1091,60 @@ const SETTINGS_STYLES = `
   height: 28px;
 }
 .settings-status {
-  min-height: 24px;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
+  padding: 0;
   border: 0;
-  border-radius: var(--settings-radius-pill);
   color: var(--color-text-muted);
-  background: var(--settings-surface-muted);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-}
-.settings-status[data-tone="ready"] {
-  color: var(--color-text);
+  background: transparent;
+  font-size: var(--settings-type-helper);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--settings-leading-helper);
+  white-space: nowrap;
 }
 .settings-status__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-icon-success);
+  display: none;
+}
+/* The status and control slots of a grammar row. */
+.settings-row-status {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--settings-type-helper);
+  line-height: var(--settings-leading-helper);
+  white-space: nowrap;
+}
+.settings-row-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--settings-space-2);
+  max-width: 100%;
+}
+.settings-row-status + .settings-row-control {
+  margin-left: 0;
+}
+.settings-row-control:first-child,
+.settings-list-copy + .settings-row-control {
+  margin-left: auto;
+}
+.settings-row-chevron {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--color-icon-muted);
+}
+.settings-row-status + .settings-row-chevron,
+.settings-row-control + .settings-row-chevron {
+  margin-left: 0;
+}
+.settings-row--grammar {
+  flex-wrap: nowrap;
+  width: 100%;
+  text-align: left;
+}
+.settings-row--grammar .settings-list-copy {
+  flex: 1 1 220px;
 }
 .settings-panel-action {
   border-radius: var(--settings-radius-control);
@@ -1508,8 +1570,9 @@ const SETTINGS_STYLES = `
 }
 .settings-dialog .settings-row-copy strong,
 .settings-dialog .settings-list-copy strong {
-  font-size: var(--settings-type-body);
+  font-size: var(--settings-type-row);
   font-weight: var(--font-weight-medium);
+  line-height: var(--settings-leading-body);
 }
 
 @media (prefers-reduced-motion: reduce) {

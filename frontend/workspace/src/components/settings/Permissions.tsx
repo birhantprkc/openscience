@@ -235,18 +235,11 @@ const Permissions: Component = () => {
                     }
                   >
                     <div class="settings-row settings-preference-row justify-between">
-                      <span
-                        class="settings-preference-icon"
-                        data-tone={trust()?.canExecuteProjectCode ? "success" : "warning"}
-                        aria-hidden="true"
-                      >
-                        <Icon name={trust()?.canExecuteProjectCode ? "shield" : "shield-alert"} size="small" />
-                      </span>
                       <div class="settings-row-copy">
                         <strong>
                           {trust()?.canExecuteProjectCode ? "Project code enabled" : "Project extensions blocked"}
                         </strong>
-                        <span class="text-11-regular text-text-weak break-all">{trust()?.root}</span>
+                        <span class="break-all">{trust()?.root}</span>
                       </div>
                       <span
                         class="settings-preference-status"
@@ -312,7 +305,7 @@ const Permissions: Component = () => {
                           <div class="settings-row settings-preference-row justify-between">
                             <div class="settings-row-copy">
                               <strong class="break-all">{grant.path}</strong>
-                              <span class="text-11-regular text-text-weak">
+                              <span class="text-12-regular text-text-weak">
                                 {grant.access === "write" ? "Read & write" : "Read only"} ·{" "}
                                 {grant.scope === "installation"
                                   ? "Every project"
@@ -390,7 +383,7 @@ const Permissions: Component = () => {
                                   {(detail) => <span class="text-text-weak font-normal"> · {detail()}</span>}
                                 </Show>
                               </strong>
-                              <span class="text-11-regular text-text-weak">
+                              <span class="text-12-regular text-text-weak">
                                 {approval.scope === "global" ? "Everywhere" : "This project"} · granted{" "}
                                 {when(approval.created)}
                               </span>

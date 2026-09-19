@@ -938,6 +938,7 @@ function SkillRow(props: {
         </span>
       </div>
       <div class="skills-workspace__details" title={props.skill.description}>
+        <span class="skills-workspace__details-slug">/{props.skill.name}</span>
         {blurb(props.skill) || "No description provided."}
       </div>
       <Show when={state()}>

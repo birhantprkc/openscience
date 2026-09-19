@@ -338,9 +338,9 @@ export const Storage: Component = () => {
                     <strong class="block text-12-medium text-text-strong">{copy().title}</strong>
                     <span class="block text-12-regular text-text-weak">{copy().detail}</span>
                     <Show when={relocation().target}>
-                      <code class="mt-1 block truncate text-11-regular text-text-weak" title={relocation().target}>
+                      <span class="mt-1 block truncate text-12-regular text-text-weak" title={relocation().target}>
                         {relocation().target}
-                      </code>
+                      </span>
                     </Show>
                   </div>
                   <Show
@@ -374,22 +374,18 @@ export const Storage: Component = () => {
           >
             <Section title="Data location" description="Sessions, credentials, skills, and logs live here.">
               <div class="settings-card settings-preferences-card">
-                <div class="settings-storage-location">
+                <div class="settings-storage-location settings-row">
                   <div class="settings-row-copy">
-                    <div class="flex min-w-0 flex-wrap items-center gap-2">
-                      <strong class="settings-storage-path min-w-0 truncate font-mono" title={usage()?.data_dir}>
-                        {usage()?.data_dir ?? "…"}
-                      </strong>
-                      <Show when={usage()?.pointer}>
-                        <span class="settings-preference-status">Custom</span>
-                      </Show>
-                    </div>
-                    <span class="settings-storage-size">
-                      {usage()?.scanning && !usage()?.updated_at
-                        ? "Calculating disk usage…"
-                        : `${fmt(usage()!.total_bytes)} total${usage()?.scanning ? " · Updating…" : ""}${updatedLabel() ? ` · Updated ${updatedLabel()}` : ""}`}
+                    <strong>{usage()?.pointer ? "Custom data directory" : "Data directory"}</strong>
+                    <span class="min-w-0 truncate" title={usage()?.data_dir}>
+                      {usage()?.data_dir ?? "…"}
                     </span>
                   </div>
+                  <span class="settings-row-status">
+                    {usage()?.scanning && !usage()?.updated_at
+                      ? "Calculating…"
+                      : `${fmt(usage()!.total_bytes)}${usage()?.scanning ? " · Updating…" : ""}`}
+                  </span>
                   <div class="settings-storage-location__actions flex shrink-0 items-center gap-1">
                     <Show when={usage()?.pointer}>
                       <button
@@ -409,7 +405,7 @@ export const Storage: Component = () => {
                         disabled={busy() || !usage()?.managed}
                         onClick={() => void chooseLocation()}
                       >
-                        Change location…
+                        Change location
                       </button>
                     </Show>
                   </div>
@@ -488,21 +484,19 @@ export const Storage: Component = () => {
                 <div class="settings-storage-cache settings-row settings-preference-row">
                   <div class="settings-row-copy">
                     <strong>OpenScience cache</strong>
-                    <code class="min-w-0 truncate text-11-regular text-text-weak" title={usage()?.cache_dir}>
+                    <span class="min-w-0 truncate" title={usage()?.cache_dir}>
                       {usage()?.cache_dir}
-                    </code>
+                    </span>
                   </div>
-                  <span class="settings-storage-metric text-12-regular text-text-weak">
+                  <span class="settings-row-status">
                     {usage()?.scanning && !usage()?.updated_at ? "Calculating…" : fmt(usage()?.cache_bytes ?? 0)}
                   </span>
                   <button
                     type="button"
                     class="settings-preference-action"
-                    data-variant="quiet"
                     disabled={clearing()}
                     onClick={() => void clearCache()}
                   >
-                    <Icon name="trash" size="small" />
                     {clearing() ? "Clearing…" : "Clear cache"}
                   </button>
                 </div>
@@ -531,10 +525,10 @@ export const Storage: Component = () => {
                   <For each={usage()!.entries}>
                     {(entry) => (
                       <div class="settings-row settings-preference-row settings-storage-usage-row">
-                        <code class="min-w-0 truncate text-13-regular text-text-strong">
+                        <span class="min-w-0 truncate text-14-medium text-text-strong">
                           {entry.name}
                           {entry.kind === "dir" ? "/" : ""}
-                        </code>
+                        </span>
                         <span class="settings-storage-metric text-12-regular text-text-weak flex-shrink-0">
                           {fmt(entry.bytes)}
                         </span>

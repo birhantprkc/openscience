@@ -1,9 +1,8 @@
 import { Button } from "@synsci/ui/button"
-import { IconButton } from "@synsci/ui/icon-button"
 import { For, Show, createMemo, createSignal, onMount } from "solid-js"
 import { usePlatform } from "@/context/platform"
 import { useServer } from "@/context/server"
-import { EmptyState, PanelBody, PanelHeader, PanelScroll, Section } from "./_shared"
+import { EmptyState, PanelBody, PanelHeader, PanelScroll, RowCopy, Section } from "./_shared"
 import { useSettingsNav } from "./nav"
 import {
   actionableScientificCapabilities,
@@ -13,7 +12,6 @@ import {
   type ScientificToolsResponse,
 } from "./scientific-tools-state"
 import { loadScientificTools, setupScientificTool } from "./scientific-tools-loader"
-import { ScientificToolLogo } from "./ScientificToolLogo"
 import "./scientific-tools.css"
 
 export default function ScientificTools() {
@@ -117,8 +115,7 @@ export default function ScientificTools() {
                 <Section
                   id="scientific-tools-local"
                   title="Local science"
-                  count={local().length}
-                  description="One exact Python environment powers these tools on this device. Install it once."
+                  description={`${local().length} tools share one exact Python environment on this device. Install it once.`}
                 >
                   <div class="settings-card scientific-tools-list" role="list">
                     <For each={local()}>
@@ -140,8 +137,7 @@ export default function ScientificTools() {
                 <Section
                   id="scientific-tools-connected"
                   title="Connected science"
-                  count={hosted().length}
-                  description="NVIDIA tools share one API key in Credentials. Runs use your NVIDIA account, not your Ace balance."
+                  description={`${hosted().length} hosted tools. NVIDIA tools share one API key in Credentials; runs use your NVIDIA account, not your Ace balance.`}
                 >
                   <div class="settings-card scientific-tools-list" role="list">
                     <For each={hosted()}>
@@ -190,24 +186,29 @@ function CapabilityRow(props: {
     return undefined
   }
   return (
-    <article class="settings-row scientific-tool-row" data-target={target()} role="listitem">
-      <ScientificToolLogo id={props.record.id} name={props.record.name} hosted={target() === "nvidia"} />
-      <span class="scientific-tool-row__copy">
-        <span class="scientific-tool-row__title">
-          <strong>{props.record.name}</strong>
-          <small>{categoryLabel(props.record.category)}</small>
-        </span>
-        <span>{props.record.summary}</span>
+    <article class="settings-row settings-row--grammar scientific-tool-row" data-target={target()} role="listitem">
+      <RowCopy
+        title={props.record.name}
+        description={
+          <>
+            {categoryLabel(props.record.category)} · {props.record.summary}{" "}
+            <button
+              type="button"
+              class="settings-inline-link"
+              aria-label={`Open ${props.record.name} source`}
+              onClick={props.onOpenSource}
+            >
+              Source
+            </button>
+          </>
+        }
+      />
+      <span class="settings-row-status scientific-tool-status" data-tone={status().tone}>
+        {status().label}
       </span>
-      <span class="scientific-tool-row__actions">
-        <span class="scientific-tool-status" data-tone={status().tone}>
-          <Show when={status().tone === "success"}>
-            <span class="scientific-tool-status__dot" aria-hidden="true" />
-          </Show>
-          {status().label}
-        </span>
-        <Show when={actionLabel()}>
-          {(label) => (
+      <Show when={actionLabel()}>
+        {(label) => (
+          <div class="settings-row-control">
             <Button
               class="scientific-tool-action"
               size="small"
@@ -217,17 +218,9 @@ function CapabilityRow(props: {
             >
               {label()}
             </Button>
-          )}
-        </Show>
-        <IconButton
-          class="scientific-tool-source"
-          icon="link"
-          variant="ghost"
-          aria-label={`Open ${props.record.name} source`}
-          title={`Open ${props.record.name} source`}
-          onClick={props.onOpenSource}
-        />
-      </span>
+          </div>
+        )}
+      </Show>
     </article>
   )
 }

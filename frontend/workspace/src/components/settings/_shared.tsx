@@ -74,6 +74,10 @@ export const PanelHeader: Component<{ title: string; description: string; toolba
 
 export const PanelBody: ParentComponent = (props) => <div class="settings-page-body min-w-0">{props.children}</div>
 
+/** A section is a muted label with at most one quiet line beneath it. A
+ * count or an action belongs in a row, never at the heading's right edge:
+ * `count` and `action` are accepted for callers that still pass them and
+ * are not drawn. */
 export const Section: ParentComponent<{
   title: string
   description?: JSX.Element
@@ -92,38 +96,75 @@ export const Section: ParentComponent<{
             <p>{props.description}</p>
           </Show>
         </div>
-        <Show
-          when={props.action}
-          fallback={
-            <Show when={props.count !== undefined}>
-              <span>{props.count}</span>
-            </Show>
-          }
-        >
-          {props.action}
-        </Show>
       </div>
       {props.children}
     </section>
   )
 }
 
-export const RowCopy: Component<{ title: string; description?: string; mono?: boolean }> = (props) => (
+/** The copy of every row: a 14px medium title and a 12px muted line under
+ * it, in the one type stack. `mono` is accepted and not drawn: a path or a
+ * command reads as text here, like everything else on the page. */
+export const RowCopy: Component<{ title: string; description?: JSX.Element; mono?: boolean }> = (props) => (
   <div class="settings-list-copy">
-    <strong classList={{ "font-mono": props.mono }}>{props.title}</strong>
+    <strong>{props.title}</strong>
     <Show when={props.description}>
       <span class="whitespace-normal text-ellipsis">{props.description}</span>
     </Show>
   </div>
 )
 
-// Muted sentence-case subheader with a trailing count.
+/** One row: copy on the left, one control on the right. A row that opens
+ * something is a button whose control is a chevron; a row that reports a
+ * state says it in plain muted text before its control. */
+export const SettingsRow: ParentComponent<{
+  title: string
+  description?: JSX.Element
+  status?: JSX.Element
+  onClick?: () => void
+  ariaLabel?: string
+}> = (props) => {
+  const body = (
+    <>
+      <RowCopy title={props.title} description={props.description} />
+      <Show when={props.status}>
+        <span class="settings-row-status">{props.status}</span>
+      </Show>
+      <Show when={props.children}>
+        <div class="settings-row-control">{props.children}</div>
+      </Show>
+    </>
+  )
+  return (
+    <Show
+      when={props.onClick}
+      fallback={
+        <div class="settings-row settings-row--grammar min-w-0" data-row="grammar">
+          {body}
+        </div>
+      }
+    >
+      {(onClick) => (
+        <button
+          type="button"
+          class="settings-row settings-row--grammar min-w-0"
+          data-row="grammar"
+          data-interactive="true"
+          aria-label={props.ariaLabel}
+          onClick={() => onClick()()}
+        >
+          {body}
+          <Icon name="chevron-right" size="small" class="settings-row-chevron" />
+        </button>
+      )}
+    </Show>
+  )
+}
+
+// Muted sentence-case subheader. A count is not drawn; it belongs in a row.
 export const SectionLabel: Component<{ label: string; count?: number }> = (props) => (
   <div class="settings-section-heading settings-section-heading--compact">
     <h3 class="settings-section-label min-w-0 break-words">{props.label}</h3>
-    <Show when={props.count !== undefined}>
-      <span>{props.count}</span>
-    </Show>
   </div>
 )
 
@@ -141,16 +182,13 @@ export const Row: ParentComponent<{ onClick?: () => void }> = (props) => (
   </Show>
 )
 
-export const EmptyState: Component<{ icon: IconProps["name"]; title: string; hint?: string }> = (props) => (
-  <div class="settings-empty-state min-w-0">
-    <div class="settings-empty-state__icon">
-      <Icon name={props.icon} size="normal" />
-    </div>
-    <span class="text-14-medium text-text-strong">{props.title}</span>
-    <Show when={props.hint}>
-      <p class="text-12-regular text-text-weak leading-relaxed max-w-[380px]">{props.hint}</p>
-    </Show>
-  </div>
+/** An empty list says so in one quiet line inside its card, as every other
+ * empty card does; `icon` is accepted for callers that still pass it. */
+export const EmptyState: Component<{ icon?: IconProps["name"]; title: string; hint?: string }> = (props) => (
+  <p class="settings-card-empty min-w-0" role="status">
+    {props.title}
+    <Show when={props.hint}> {props.hint}</Show>
+  </p>
 )
 
 // ── Toolbar pieces ──────────────────────────────────────────────────────────

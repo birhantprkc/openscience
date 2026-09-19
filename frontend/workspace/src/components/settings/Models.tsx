@@ -21,7 +21,6 @@ import { resolveModelAccessRoute, type ModelRouteAccess } from "@/context/model-
 import { modelPricing, pricingUpstream } from "@/context/model-pricing"
 import { CodexConnection } from "./CodexConnection"
 import { ProviderKeys } from "./ProviderKeys"
-import { ProviderLogo } from "./ProviderLogo"
 import { modelGroup, modelGroupLabel, modelGroupRank } from "../model-groups"
 import { FilterMenu, PanelBody, PanelHeader, PanelScroll, RowCopy, SearchInput, Section, steady } from "./_shared"
 import { settingsApi } from "./api"
@@ -352,15 +351,10 @@ export default function Models() {
                       <Show when={option}>
                         {(entry) => (
                           <span class="models-default-option">
-                            <Show when={entry().providerLogo}>
-                              {(logo) => (
-                                <ProviderLogo id={logo()} label={entry().provider ?? "Model provider"} size="small" />
-                              )}
-                            </Show>
                             <span class="min-w-0 truncate">{entry().label}</span>
                             <Show when={entry().provider}>
                               {(provider) => (
-                                <span class="shrink-0 text-10-regular text-text-weaker">· {provider()}</span>
+                                <span class="shrink-0 text-12-regular text-text-weak">· {provider()}</span>
                               )}
                             </Show>
                           </span>
@@ -389,7 +383,7 @@ export default function Models() {
             </div>
             <Show when={catalogOpen()}>
               <div id="composer-model-catalog" class="models-catalog-disclosure">
-                <p class="models-catalog-notice text-11-regular text-text-weak" aria-live="polite">
+                <p class="models-catalog-notice text-12-regular text-text-weak" aria-live="polite">
                   {notice()}
                 </p>
                 <div class="models-catalog-toolbar">
@@ -413,7 +407,7 @@ export default function Models() {
                         <div class="settings-list-header">
                           <h4
                             id={`composer-models-${group.id.replace(/[^a-z0-9-]/gi, "-")}`}
-                            class="text-11-medium text-text-weak"
+                            class="text-12-medium text-text-weak"
                           >
                             {group.label}
                           </h4>
@@ -422,15 +416,14 @@ export default function Models() {
                           {(model) => (
                             <div class="settings-row settings-model-row models-compact-row">
                               <div class="models-model-identity">
-                                <ProviderLogo id={model.providerLogo} label={model.provider} size="small" />
                                 <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                                   <span class="flex min-w-0 items-center gap-2">
-                                    <strong class="truncate text-13-medium text-text-strong">{model.label}</strong>
+                                    <strong class="truncate text-14-medium text-text-strong">{model.label}</strong>
                                     <Show when={model.latest}>
-                                      <span class="shrink-0 text-10-medium text-text-weaker">Latest</span>
+                                      <span class="shrink-0 text-12-regular text-text-weak">Latest</span>
                                     </Show>
                                   </span>
-                                  <span class="truncate text-11-regular text-text-weak">
+                                  <span class="truncate text-12-regular text-text-weak">
                                     {modelSummary({
                                       reasoning: model.reasoning,
                                       context: model.context,
@@ -440,7 +433,7 @@ export default function Models() {
                                           : `${model.provider} · ${model.routes[0]?.access ?? model.access}`,
                                     })}
                                   </span>
-                                  <details class="models-rate-details text-11-regular text-text-weak">
+                                  <details class="models-rate-details text-12-regular text-text-weak">
                                     <summary>Rates and limits</summary>
                                     <For each={model.routes}>
                                       {(route) => {
@@ -453,7 +446,7 @@ export default function Models() {
                                           })
                                         return (
                                           <div class="models-rate-route">
-                                            <strong class="text-11-medium text-text-base">
+                                            <strong class="text-12-medium text-text-base">
                                               {route.access} · {pricingUpstream(route.source.pricing) ?? route.provider}
                                             </strong>
                                             <dl>

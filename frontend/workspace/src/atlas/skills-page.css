@@ -333,6 +333,13 @@
   text-overflow: ellipsis;
 }
 
+/* The slug repeats inside the purpose line for the settings layout, which
+   folds the row to title and one line; the workspace layout keeps it in the
+   identity column. */
+.skills-workspace__details-slug {
+  display: none;
+}
+
 .skills-workspace__details {
   margin: 0;
   overflow: hidden;

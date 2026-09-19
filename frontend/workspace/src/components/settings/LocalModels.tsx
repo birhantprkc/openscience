@@ -419,10 +419,7 @@ const LocalModels: Component = () => {
                     <RowCopy title={rt.name} description={runtimeDetail(rt)} />
                     <div class="ml-auto flex max-w-full shrink-0 items-center gap-2">
                       <Show when={rt.running}>
-                        <span class="settings-status" data-tone="ready">
-                          <span class="settings-status__dot" aria-hidden="true" />
-                          Running
-                        </span>
+                        <span class="settings-row-status">Running</span>
                       </Show>
                       <Show
                         when={rt.installed}
@@ -474,49 +471,66 @@ const LocalModels: Component = () => {
         <Section title="Pull a model" description="Copy an ollama pull command, then run it in your terminal.">
           <Card>
             <div class="settings-row">
-              <input
-                class="settings-field min-w-0 flex-1 basis-[220px] font-mono"
-                aria-label="Model to pull with Ollama"
-                placeholder="llama3.1 · qwen2.5-coder · phi3"
-                value={pullName()}
-                onInput={(e) => setPullName(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === "Enter" && pull()}
+              <RowCopy
+                title="Pull a model"
+                description="Type a name from the Ollama library, such as llama3.1, qwen2.5-coder or phi3."
+              />
+              <div class="ml-auto flex max-w-full shrink-0 items-center gap-2">
+                <input
+                  class="settings-field w-44 min-w-0"
+                  aria-label="Model to pull with Ollama"
+                  placeholder="llama3.1"
+                  value={pullName()}
+                  onInput={(e) => setPullName(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === "Enter" && pull()}
+                />
+                <Button
+                  size="small"
+                  variant="secondary"
+                  class="settings-panel-action shrink-0"
+                  disabled={!pullName().trim()}
+                  onClick={pull}
+                >
+                  Copy command
+                </Button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <RowCopy
+                title="Start Ollama"
+                description="Copies ollama serve. Run it first if the server isn't up yet."
               />
               <Button
                 size="small"
                 variant="secondary"
-                class="settings-panel-action shrink-0"
-                disabled={!pullName().trim()}
-                onClick={pull}
-              >
-                Copy command
-              </Button>
-            </div>
-            <div class="settings-row">
-              <RowCopy title="Start Ollama" description="Run this first if the server isn't up yet." />
-              <Button
-                size="small"
-                variant="secondary"
-                class="settings-panel-action settings-panel-action--quiet ml-auto shrink-0 font-mono"
+                class="settings-panel-action ml-auto shrink-0"
                 aria-label="Copy ollama serve command"
                 onClick={() => void copyCommand("ollama serve")}
               >
-                ollama serve
+                Copy command
               </Button>
             </div>
           </Card>
         </Section>
 
         {/* ── Detected runtimes ── */}
-        <Section
-          title="Detected on this machine"
-          action={
-            <Button size="small" variant="secondary" class="settings-panel-action" disabled={busy()} onClick={refetch}>
-              Rescan
-            </Button>
-          }
-        >
+        <Section title="Detected on this machine" description="Servers already running here that OpenScience can use.">
           <Card>
+            <div class="settings-row">
+              <RowCopy
+                title="Scan for servers"
+                description="Looks for Ollama, LM Studio and other OpenAI-compatible servers on this machine."
+              />
+              <Button
+                size="small"
+                variant="secondary"
+                class="settings-panel-action ml-auto shrink-0"
+                disabled={busy()}
+                onClick={refetch}
+              >
+                Rescan
+              </Button>
+            </div>
             <Show
               when={!detected.loading && !status.loading}
               fallback={
@@ -530,8 +544,7 @@ const LocalModels: Component = () => {
                 each={discoveries()}
                 fallback={
                   <p class="settings-card-empty" role="status">
-                    Nothing running yet. Start a server such as <code>ollama serve</code>, then rescan or add an
-                    endpoint below.
+                    Nothing running yet. Start a server such as ollama serve, then rescan or add an endpoint below.
                   </p>
                 }
               >
@@ -559,35 +572,38 @@ const LocalModels: Component = () => {
             <Section
               title={`Choose ${source().name} models`}
               description="Only the models you select appear in Models."
-              action={
-                <div class="flex items-center gap-2">
-                  <Button
-                    size="small"
-                    variant="ghost"
-                    class="settings-panel-action settings-panel-action--quiet"
-                    disabled={chosen().size === source().models.length}
-                    onClick={() => setChosen(new Set(source().models))}
-                  >
-                    Select all
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="ghost"
-                    class="settings-panel-action settings-panel-action--quiet"
-                    disabled={chosen().size === 0}
-                    onClick={() => setChosen(new Set<string>())}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              }
             >
               <div class="settings-card settings-form-card" aria-label={`Choose ${source().name} models`}>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-12-regular text-text-weak">
+                    {chosen().size} of {source().models.length} selected
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <Button
+                      size="small"
+                      variant="ghost"
+                      class="settings-panel-action settings-panel-action--quiet"
+                      disabled={chosen().size === source().models.length}
+                      onClick={() => setChosen(new Set(source().models))}
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="ghost"
+                      class="settings-panel-action settings-panel-action--quiet"
+                      disabled={chosen().size === 0}
+                      onClick={() => setChosen(new Set<string>())}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
                 <div class="flex max-h-52 flex-col gap-1 overflow-y-auto">
                   <For each={source().models}>
                     {(model) => (
                       <Checkbox checked={chosen().has(model)} onChange={() => toggleChoice(model)}>
-                        <span class="min-w-0 truncate font-mono text-12-regular">{model}</span>
+                        <span class="min-w-0 truncate text-12-regular">{model}</span>
                       </Checkbox>
                     )}
                   </For>
@@ -733,11 +749,11 @@ const LocalModels: Component = () => {
             </div>
             <Show when={found().length > 0}>
               <div class="flex flex-col gap-1">
-                <span class="text-11-regular text-text-weak">{listedUrl()}</span>
+                <span class="text-12-regular text-text-weak">{listedUrl()}</span>
                 <For each={found()}>
                   {(m) => (
                     <Checkbox checked={selected().has(m)} onChange={() => toggle(m)}>
-                      <span class="min-w-0 truncate font-mono text-12-regular">{m}</span>
+                      <span class="min-w-0 truncate text-12-regular">{m}</span>
                     </Checkbox>
                   )}
                 </For>
@@ -756,7 +772,14 @@ const LocalModels: Component = () => {
         </Section>
 
         {/* ── Configured ── */}
-        <Section title="Configured" count={configured()?.length}>
+        <Section
+          title="Configured"
+          description={
+            configured()?.length
+              ? `${configured()?.length} local or self-hosted provider${configured()?.length === 1 ? "" : "s"} in the catalog.`
+              : "Local and self-hosted providers you have added."
+          }
+        >
           <Card>
             <Show
               when={!configured.loading}
@@ -838,7 +861,7 @@ const ContextField: Component<{ value: string; description: string; onInput: (va
     <RowCopy title="Context window" description={props.description} />
     <div class="ml-auto flex shrink-0 items-center gap-2">
       <input
-        class="settings-field w-32 text-right font-mono"
+        class="settings-field w-32 text-right"
         type="number"
         min="1024"
         max="2097152"
@@ -847,7 +870,7 @@ const ContextField: Component<{ value: string; description: string; onInput: (va
         value={props.value}
         onInput={(event) => props.onInput(event.currentTarget.value)}
       />
-      <span class="text-11-regular text-text-weak">tokens</span>
+      <span class="text-12-regular text-text-weak">tokens</span>
     </div>
   </div>
 )

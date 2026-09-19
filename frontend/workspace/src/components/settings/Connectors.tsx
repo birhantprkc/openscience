@@ -3,7 +3,6 @@ import { Button } from "@synsci/ui/button"
 import { Select } from "@synsci/ui/select"
 import { Switch } from "@synsci/ui/switch"
 import { Icon } from "@synsci/ui/icon"
-import { IconButton } from "@synsci/ui/icon-button"
 import { showToast } from "@synsci/ui/toast"
 import { useDialog } from "@synsci/ui/context/dialog"
 import { confirmDialog } from "@/atlas/dialogs"
@@ -41,7 +40,6 @@ import {
 } from "./connector-form"
 import type { ConnectorCatalogRecord } from "./scientific-tools-state"
 import { loadScientificTools } from "./scientific-tools-loader"
-import { ProviderLogo } from "./ProviderLogo"
 
 type McpConfig = NonNullable<Config["mcp"]>[string]
 type PendingAuthorization = { authorizationUrl: string; flowId: string }
@@ -646,31 +644,33 @@ export default function Connectors() {
                           role="listitem"
                         >
                           <div class="connectors-row">
-                            <div class="connectors-identity" data-kind={identity.icon}>
-                              <Show when={identity.providerLogo} fallback={<Icon name={identity.icon} size="small" />}>
-                                {(provider) => <ProviderLogo id={provider()} label={identity.label} size="small" />}
-                              </Show>
-                            </div>
                             <div class="connectors-copy">
                               <div class="connectors-copy__title">
                                 <strong>{name}</strong>
-                                <span>{identity.label}</span>
                               </div>
                               <p title={config.type === "local" ? config.command.join(" ") : config.url}>
-                                {config.type === "local" ? config.command.join(" ") : config.url}
+                                {identity.label} · {config.type === "local" ? config.command.join(" ") : config.url}
+                                <Show when={detail()}>
+                                  {(value) => (
+                                    <>
+                                      {" "}
+                                      · {value().tools.length} tools · {value().resources.length} resources ·{" "}
+                                      {value().prompts.length} prompts
+                                    </>
+                                  )}
+                                </Show>{" "}
+                                <button
+                                  type="button"
+                                  class="settings-inline-link"
+                                  aria-expanded={expanded() === name}
+                                  aria-label={expanded() === name ? `Hide ${name} details` : `Show ${name} details`}
+                                  onClick={() => toggleDetails(name)}
+                                >
+                                  {expanded() === name ? "Hide details" : "Details"}
+                                </button>
                               </p>
-                              <Show when={detail()}>
-                                {(value) => (
-                                  <div class="connectors-capability-summary">
-                                    <span>{value().tools.length} tools</span>
-                                    <span>{value().resources.length} resources</span>
-                                    <span>{value().prompts.length} prompts</span>
-                                  </div>
-                                )}
-                              </Show>
                             </div>
                             <span class="connectors-status" data-tone={dot(s())}>
-                              <span aria-hidden="true" />
                               {statusText(s())}
                             </span>
                             <div class="connectors-row__actions">
@@ -701,13 +701,6 @@ export default function Connectors() {
                               >
                                 {name}
                               </Switch>
-                              <IconButton
-                                icon={expanded() === name ? "chevron-down" : "chevron-right"}
-                                variant="ghost"
-                                aria-expanded={expanded() === name}
-                                aria-label={expanded() === name ? `Hide ${name} details` : `Show ${name} details`}
-                                onClick={() => toggleDetails(name)}
-                              />
                             </div>
                           </div>
                           <Show when={pendingAuthorizations()[name]}>
@@ -845,18 +838,30 @@ export default function Connectors() {
                         data-expanded={catalogExpanded() === entry.id ? "true" : undefined}
                       >
                         <div class="connectors-catalog__main">
-                          <ProviderLogo id={entry.id === "s3" ? "aws" : entry.id} label={entry.name} size="small" />
                           <div class="connectors-catalog__copy">
                             <div class="connectors-catalog__title">
                               <strong>{entry.name}</strong>
-                              <span>{entry.recommended ? "Recommended" : "Official"}</span>
                             </div>
-                            <p>{entry.summary}</p>
+                            <p>
+                              <span data-tag={entry.status}>{entry.recommended ? "Recommended" : "Official"}</span> ·{" "}
+                              {entry.summary}{" "}
+                              <button
+                                type="button"
+                                class="settings-inline-link"
+                                aria-expanded={catalogExpanded() === entry.id}
+                                aria-label={`${catalogExpanded() === entry.id ? "Hide" : "Show"} ${entry.name} details`}
+                                onClick={() =>
+                                  setCatalogExpanded(catalogExpanded() === entry.id ? undefined : entry.id)
+                                }
+                              >
+                                {catalogExpanded() === entry.id ? "Hide details" : "Details"}
+                              </button>
+                            </p>
                           </div>
                           <div class="connectors-catalog__actions">
                             <button
                               type="button"
-                              class="connectors-action connectors-action--primary"
+                              class="connectors-action"
                               disabled={busy(`catalog:${entry.id}`)}
                               onClick={() => void addCatalogPreset(entry)}
                             >
@@ -866,13 +871,6 @@ export default function Connectors() {
                                   : "Connect"
                                 : "Set up"}
                             </button>
-                            <IconButton
-                              icon={catalogExpanded() === entry.id ? "chevron-down" : "chevron-right"}
-                              variant="ghost"
-                              aria-expanded={catalogExpanded() === entry.id}
-                              aria-label={`${catalogExpanded() === entry.id ? "Hide" : "Show"} ${entry.name} details`}
-                              onClick={() => setCatalogExpanded(catalogExpanded() === entry.id ? undefined : entry.id)}
-                            />
                           </div>
                         </div>
                         <Show when={catalogExpanded() === entry.id}>
@@ -905,38 +903,33 @@ export default function Connectors() {
             </Show>
 
             <Show when={manualCatalogEntries().length > 0}>
-              <details class="connectors-manual">
-                <summary>
-                  <span>
-                    <strong>Manual integrations</strong>
-                    <small>
-                      {manualCatalogEntries()
-                        .map((entry) => entry.name)
-                        .join(" · ")}
-                    </small>
-                  </span>
-                  <Icon name="chevron-right" size="small" />
-                </summary>
+              <section class="settings-section connectors-catalog" aria-label="Manual integrations">
+                <div class="settings-section-heading">
+                  <div>
+                    <h3>Manual integrations</h3>
+                    <p>Services with a documented MCP setup you add by hand.</p>
+                  </div>
+                </div>
                 <div class="settings-card connectors-manual__list" role="list">
                   <For each={manualCatalogEntries()}>
                     {(entry) => (
                       <article class="connectors-manual__row" role="listitem">
-                        <ProviderLogo id={entry.id} label={entry.name} size="small" />
                         <div class="connectors-catalog__copy">
                           <div class="connectors-catalog__title">
                             <strong>{entry.name}</strong>
-                            <span>Manual setup</span>
                           </div>
-                          <p>{entry.summary}</p>
+                          <p>
+                            Manual setup · {entry.summary}{" "}
+                            <button
+                              type="button"
+                              class="settings-inline-link"
+                              onClick={() => platform.openLink(entry.source_url)}
+                            >
+                              Guide
+                            </button>
+                          </p>
                         </div>
                         <div class="connectors-catalog__actions">
-                          <button
-                            type="button"
-                            class="connectors-detail-action"
-                            onClick={() => platform.openLink(entry.source_url)}
-                          >
-                            Guide
-                          </button>
                           <button
                             type="button"
                             class="connectors-action"
@@ -949,7 +942,7 @@ export default function Connectors() {
                     )}
                   </For>
                 </div>
-              </details>
+              </section>
             </Show>
 
             <Show
@@ -1010,9 +1003,6 @@ function ConnectorForm(props: {
       </div>
       <div class="connectors-form">
         <div class="connectors-form__lead">
-          <div class="connectors-identity" data-kind={props.state.type === "remote" ? "cloud" : "console"}>
-            <Icon name={props.state.type === "remote" ? "cloud" : "console"} size="small" />
-          </div>
           <div>
             <strong>{props.state.type === "remote" ? "Remote MCP server" : "Local MCP process"}</strong>
             <p>

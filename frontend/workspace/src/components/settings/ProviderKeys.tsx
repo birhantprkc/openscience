@@ -1,7 +1,6 @@
 import { For, Show, createMemo, createSignal } from "solid-js"
 import { Button } from "@synsci/ui/button"
 import { useDialog } from "@synsci/ui/context/dialog"
-import { Icon } from "@synsci/ui/icon"
 import { Select } from "@synsci/ui/select"
 import type { Provider } from "@synsci/sdk/v2/client"
 import { confirmDialog } from "@/atlas/dialogs"
@@ -9,7 +8,6 @@ import { useGlobalSDK } from "@/context/global-sdk"
 import { useGlobalSync } from "@/context/global-sync"
 import { useProviders } from "@/hooks/use-providers"
 import { MODEL_PROVIDERS, MODEL_PROVIDER_LABELS, modelProvider } from "./model-providers"
-import { ProviderLogo } from "./ProviderLogo"
 
 /**
  * `note` says where a key that this panel cannot delete actually lives, so the
@@ -140,12 +138,9 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
     <div class="models-provider-keys">
       <div class="settings-row models-compact-row models-provider-key-heading">
         <div class="models-provider-identity">
-          <span class="models-provider-key-heading__icon" aria-hidden="true">
-            <Icon name="link" size="small" />
-          </span>
           <div class="models-provider-copy">
-            <span class="text-13-medium text-text-strong">Provider API keys</span>
-            <span class="text-11-regular text-text-weak">Stored in the owner-only local auth file.</span>
+            <span class="text-14-medium text-text-strong">Provider API keys</span>
+            <span class="text-12-regular text-text-weak">Stored in the owner-only local auth file.</span>
           </div>
         </div>
         <span class="models-row-action">
@@ -179,9 +174,6 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
           <label class="models-key-field">
             <span class="text-12-medium text-text-weak">Provider</span>
             <div class="models-provider-select">
-              <span class="models-provider-select__mark">
-                <ProviderLogo id={provider()} label={modelProvider(provider()).label} size="small" />
-              </span>
               <Select
                 aria-label="Model provider"
                 class="models-provider-options"
@@ -197,20 +189,8 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
                 triggerStyle={{
                   width: "100%",
                   "justify-content": "space-between",
-                  "padding-left": "34px",
                 }}
-              >
-                {(item) => (
-                  <Show when={item}>
-                    {(entry) => (
-                      <span class="flex min-w-0 items-center gap-2.5">
-                        <ProviderLogo id={entry().id} label={entry().label} size="small" />
-                        <span class="min-w-0 truncate">{entry().label}</span>
-                      </span>
-                    )}
-                  </Show>
-                )}
-              </Select>
+              />
             </div>
           </label>
           <label class="models-key-field">
@@ -244,26 +224,22 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
             {(item) => (
               <div class="settings-row models-compact-row models-provider-row">
                 <div class="models-provider-identity min-w-0 flex-1 basis-[220px]">
-                  <ProviderLogo id={item.id} label={MODEL_PROVIDER_LABELS[item.id] ?? item.id} />
                   <div class="models-provider-copy">
-                    <span class="truncate text-13-medium text-text-strong">
+                    <span class="truncate text-14-medium text-text-strong">
                       {MODEL_PROVIDER_LABELS[item.id] ?? item.id}
                     </span>
                     <div class="models-provider-meta">
-                      <div class="settings-status" data-tone="ready">
-                        <span class="settings-status__dot" aria-hidden="true" />
-                        Available
-                      </div>
                       <span class="models-provider-source" title={source(item).title}>
                         {source(item).label}
                       </span>
                     </div>
                   </div>
                 </div>
+                <span class="settings-row-status">Available</span>
                 <Show
                   when={source(item).removable}
                   fallback={
-                    <span class="models-provider-note text-11-regular text-text-weak" title={source(item).title}>
+                    <span class="models-provider-note text-12-regular text-text-weak" title={source(item).title}>
                       {source(item).note ?? "configured externally"}
                     </span>
                   }

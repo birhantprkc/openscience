@@ -11,7 +11,6 @@ import { usePlatform } from "@/context/platform"
 import { confirmDialog } from "@/atlas/dialogs"
 import { settingsApi } from "./api"
 import { CredentialServices } from "./CredentialServices"
-import { ProviderLogo } from "./ProviderLogo"
 import { Card, PanelBody, PanelHeader, PanelScroll, RowCopy, Section, steady } from "./_shared"
 import "./preference-panels.css"
 
@@ -731,31 +730,23 @@ const Compute: Component = () => {
             <Card>
               <div class="settings-compute-card" aria-busy={modalBusy() ? "true" : undefined}>
                 <div class="settings-compute-provider-row">
-                  <div class="flex min-w-0 flex-1 basis-[240px] items-center gap-2.5">
-                    <ProviderLogo id="modal" label="Modal" connected={modal()?.connected} />
-                    <div class="flex min-w-0 flex-col gap-0.5">
-                      <div class="flex min-w-0 flex-wrap items-center gap-2">
-                        <span class="text-14-medium text-text-strong">Modal</span>
-                        <Badge tone="ready">Integrated</Badge>
-                      </div>
-                      <span class="text-12-regular text-text-weak">
-                        {modal()?.connected
-                          ? modal()?.source === "modal_toml"
-                            ? "Active profile from ~/.modal.toml"
-                            : "Token stored locally and encrypted."
-                          : data()?.modal_file.ready
-                            ? "Modal CLI configuration found at ~/.modal.toml."
-                            : data()?.modal_file.found
-                              ? "Modal config found, but its active profile has no usable token."
-                              : "Enter the token ID and secret from Modal."}
-                      </span>
-                    </div>
+                  <div class="flex min-w-0 flex-1 basis-[240px] flex-col gap-0.5">
+                    <span class="text-14-medium text-text-strong">Modal</span>
+                    <span class="text-12-regular text-text-weak">
+                      {modal()?.connected
+                        ? modal()?.source === "modal_toml"
+                          ? "Active profile from ~/.modal.toml"
+                          : "Token stored locally and encrypted."
+                        : data()?.modal_file.ready
+                          ? "Modal CLI configuration found at ~/.modal.toml. Token values stay in that file."
+                          : data()?.modal_file.found
+                            ? "Modal config found, but its active profile has no usable token."
+                            : "Enter the token ID and secret from Modal."}
+                    </span>
                   </div>
                   <Show when={modal()?.connected}>
                     <div class="settings-compute-actions">
-                      <span class="settings-preference-status" data-tone={modal()?.enabled ? "success" : undefined}>
-                        {modal()?.enabled ? "Enabled" : "Off"}
-                      </span>
+                      <span class="settings-row-status">{modal()?.enabled ? "Enabled" : "Off"}</span>
                       <Switch
                         hideLabel
                         checked={modal()?.enabled ?? false}
@@ -766,26 +757,21 @@ const Compute: Component = () => {
                       </Switch>
                     </div>
                   </Show>
-                </div>
-                <Show when={connectionNotice()}>{(notice) => <NoticeBox notice={notice()} />}</Show>
-                <Show when={!data.loading && !modal()?.connected && data()?.modal_file.ready}>
-                  <div class="settings-alert flex-wrap">
-                    <p class="min-w-0 flex-1 basis-[240px] text-12-regular text-text-weak">
-                      Configure OpenScience to use this profile. Token values stay in the Modal config file.
-                    </p>
-                    <span class="ml-auto shrink-0">
+                  <Show when={!data.loading && !modal()?.connected && data()?.modal_file.ready}>
+                    <div class="settings-compute-actions">
                       <Button
                         class="settings-panel-action"
                         size="small"
-                        variant="primary"
+                        variant="secondary"
                         disabled={modalBusy()}
                         onClick={() => void configure()}
                       >
-                        {isBusy("modal:configure") ? "Configuring…" : "Configure"}
+                        {isBusy("modal:configure") ? "Configuring…" : "Use this profile"}
                       </Button>
-                    </span>
-                  </div>
-                </Show>
+                    </div>
+                  </Show>
+                </div>
+                <Show when={connectionNotice()}>{(notice) => <NoticeBox notice={notice()} />}</Show>
                 <Show when={!data.loading && !modal()?.connected && !data()?.modal_file.ready}>
                   <div class="flex flex-col gap-2">
                     <div class="settings-form-grid">
@@ -813,7 +799,7 @@ const Compute: Component = () => {
                 </Show>
                 <Show when={modal()?.connected}>
                   <div class="settings-list-header">
-                    <h4 class="text-11-medium text-text-weak">Job defaults</h4>
+                    <h4 class="text-12-medium text-text-weak">Job defaults</h4>
                   </div>
                   <div class="settings-form-grid">
                     <Field label="Modal app" value={app()} placeholder="openscience" onInput={setApp} />
@@ -869,7 +855,7 @@ const Compute: Component = () => {
                       {isBusy("modal:save") ? "Saving…" : "Save defaults"}
                     </Button>
                   </div>
-                  <p class="text-11-regular text-text-weak">
+                  <p class="text-12-regular text-text-weak">
                     Credentials stay local. Every dispatch still requires approval.
                   </p>
                 </Show>
@@ -879,7 +865,7 @@ const Compute: Component = () => {
 
           <Section
             title="GPU provider credentials"
-            description="Store encrypted credentials for reviewed read-only agent operations. Test connection admits only administrator-managed executables; ordinary Homebrew and pip installs remain credential-only. Credentials never enter agent shells, and paid or mutating actions remain unavailable."
+            description="Encrypted credentials for reviewed read-only agent operations. They never enter agent shells, and paid or mutating actions stay unavailable."
           >
             <Card>
               <For each={cliProviders()}>
@@ -891,25 +877,19 @@ const Compute: Component = () => {
                   return (
                     <div class="settings-list-item" aria-busy={rowBusy() ? "true" : undefined}>
                       <div class="settings-list-row">
-                        <ProviderLogo id={item.id} label={item.name} />
                         <div class="settings-list-copy min-w-0 flex-1">
-                          <div class="flex min-w-0 flex-wrap items-center gap-2">
-                            <strong>{item.name}</strong>
-                            <span class="settings-chip">Scoped credential</span>
-                          </div>
-                          <span>{item.hint}</span>
-                          <span>
-                            Broker field <code>{item.credential.environment}</code>
-                            {item.credential.aliases.length ? ` · aliases ${item.credential.aliases.join(", ")}` : ""}
+                          <strong>{item.name}</strong>
+                          <span
+                            title={`Broker field ${item.credential.environment}${item.credential.aliases.length ? ` · aliases ${item.credential.aliases.join(", ")}` : ""}`}
+                          >
+                            {item.hint}
+                            <Show when={item.last_used}>
+                              {(value) => <> Last used {new Date(value()).toLocaleDateString()}.</>}
+                            </Show>
                           </span>
-                          <Show when={item.last_used}>
-                            {(value) => <span>Last successful broker use {new Date(value()).toLocaleString()}</span>}
-                          </Show>
                         </div>
-                        <div class="settings-list-actions ml-auto max-w-full flex-wrap justify-end">
-                          <span class="settings-preference-status" data-tone={item.enabled ? "success" : undefined}>
-                            {status()}
-                          </span>
+                        <div class="settings-list-actions max-w-full flex-wrap justify-end">
+                          <span class="settings-row-status">{status()}</span>
                           <Show when={item.connected}>
                             <Switch
                               hideLabel
@@ -919,16 +899,16 @@ const Compute: Component = () => {
                             >
                               Enable {item.name} credential
                             </Switch>
-                            <button
-                              type="button"
-                              class="settings-icon-action"
+                            <Button
+                              class="settings-panel-action settings-panel-action--quiet"
+                              size="small"
+                              variant="secondary"
                               disabled={rowBusy()}
                               aria-label={`Remove ${item.name} credential`}
-                              title="Remove credential"
                               onClick={() => void removeProvider(item)}
                             >
-                              <Icon name="trash" size="small" />
-                            </button>
+                              Remove
+                            </Button>
                           </Show>
                           <Show when={item.enabled}>
                             <Button
@@ -975,7 +955,7 @@ const Compute: Component = () => {
                               onInput={(event) => setProviderKey(item.id, event.currentTarget.value)}
                             />
                           </label>
-                          <p class="text-11-regular text-text-weak">
+                          <p class="text-12-regular text-text-weak">
                             Stored encrypted. Saving a new credential leaves this bridge off; updating preserves its
                             current on/off state. No provider API call or paid resource is created here.
                           </p>
@@ -1005,7 +985,7 @@ const Compute: Component = () => {
                           <div class="credential-form min-w-0" role={result().ok ? "status" : "alert"}>
                             <p
                               class={
-                                result().ok ? "text-11-regular text-text-success" : "text-11-regular text-text-danger"
+                                result().ok ? "text-12-regular text-text-success" : "text-12-regular text-text-danger"
                               }
                             >
                               {result().ok
@@ -1071,16 +1051,7 @@ const Compute: Component = () => {
                             <div class="settings-row settings-compute-host-row">
                               <div class="settings-compute-host-copy">
                                 <div class="min-w-0 flex-1">
-                                  <div class="flex min-w-0 flex-wrap items-center gap-2">
-                                    <span class="truncate text-14-medium text-text-strong">{item.label}</span>
-                                    <Badge tone={probe()?.ok || item.fingerprint ? "ready" : "muted"}>
-                                      {probe()?.ok
-                                        ? "Ready to dispatch"
-                                        : item.fingerprint
-                                          ? "Host key pinned"
-                                          : schedulerLabel(item.scheduler)}
-                                    </Badge>
-                                  </div>
+                                  <span class="block truncate text-14-medium text-text-strong">{item.label}</span>
                                   <p class="mt-0.5 truncate text-12-regular text-text-weak">
                                     {destination(item)}
                                     {item.workdir ? ` · ${item.workdir}` : ""}
@@ -1089,7 +1060,7 @@ const Compute: Component = () => {
                                     <p class="settings-compute-host-notes-copy">{item.notes}</p>
                                   </Show>
                                   <Show when={item.identity_file || item.proxy_jump}>
-                                    <p class="mt-1 truncate font-mono text-11-regular text-text-weak">
+                                    <p class="mt-1 truncate text-12-regular text-text-weak">
                                       {item.identity_file ? `Identity ${item.identity_file}` : "SSH agent"}
                                       {item.proxy_jump ? ` · via ${item.proxy_jump}` : ""}
                                     </p>
@@ -1099,8 +1070,8 @@ const Compute: Component = () => {
                                       <p
                                         class={
                                           result().ok
-                                            ? "mt-1 text-11-regular text-text-success"
-                                            : "mt-1 text-11-regular text-text-danger"
+                                            ? "mt-1 text-12-regular text-text-success"
+                                            : "mt-1 text-12-regular text-text-danger"
                                         }
                                       >
                                         {result().ok
@@ -1110,10 +1081,7 @@ const Compute: Component = () => {
                                     )}
                                   </Show>
                                   <Show when={item.fingerprint}>
-                                    <p
-                                      class="mt-1 truncate font-mono text-11-regular text-text-weak"
-                                      title={item.fingerprint}
-                                    >
+                                    <p class="mt-1 truncate text-12-regular text-text-weak" title={item.fingerprint}>
                                       {item.fingerprint} · {item.concurrency} concurrent job
                                       {item.concurrency === 1 ? "" : "s"}
                                     </p>
@@ -1121,6 +1089,13 @@ const Compute: Component = () => {
                                 </div>
                               </div>
                               <div class="settings-compute-host-actions">
+                                <span class="settings-row-status">
+                                  {probe()?.ok
+                                    ? "Ready to dispatch"
+                                    : item.fingerprint
+                                      ? "Host key pinned"
+                                      : schedulerLabel(item.scheduler)}
+                                </span>
                                 <Button
                                   class="settings-panel-action settings-panel-action--quiet"
                                   size="small"
@@ -1213,8 +1188,8 @@ const Compute: Component = () => {
                         <div class="settings-row settings-compute-host-row">
                           <div class="settings-compute-host-copy">
                             <div class="min-w-0 flex-1">
-                              <p class="text-13-medium text-text-strong">{item.alias}</p>
-                              <p class="mt-0.5 truncate text-11-regular text-text-weak">
+                              <p class="text-14-medium text-text-strong">{item.alias}</p>
+                              <p class="mt-0.5 truncate text-12-regular text-text-weak">
                                 {[item.user, item.hostname ?? item.alias].filter(Boolean).join("@")}
                                 {item.port ? `:${item.port}` : ""}
                                 {item.proxy_jump ? ` · via ${item.proxy_jump}` : ""}
@@ -1432,7 +1407,7 @@ const NoticeBox: Component<{ notice: Notice }> = (props) => (
         {props.notice.title}
       </p>
       <Show when={props.notice.detail}>
-        <p class="mt-0.5 text-11-regular text-text-weak">{props.notice.detail}</p>
+        <p class="mt-0.5 text-12-regular text-text-weak">{props.notice.detail}</p>
       </Show>
     </div>
   </div>

@@ -445,7 +445,7 @@ export function ManagedInference(props: {
               {formatCreditBalance(spendable()!)} <span class="models-routing__wallet-unit">available</span>
             </Show>
             <Show when={state.wallet?.refreshing}>
-              <span class="models-routing__sync"> Refreshing…</span>
+              <span class="models-routing__sync sr-only"> Refreshing…</span>
             </Show>
           </dd>
           <Show when={state.wallet?.signedIn && !state.wallet.balanceRedacted}>
