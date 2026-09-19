@@ -13,6 +13,7 @@ import { settingsApi } from "./api"
 import { CredentialServices } from "./CredentialServices"
 import { Card, PanelBody, PanelHeader, PanelScroll, RowCopy, Section, steady } from "./_shared"
 import "./preference-panels.css"
+import { ProviderLogo } from "./ProviderLogo"
 
 type Scheduler = "none" | "slurm" | "pbs"
 type Host = {
@@ -730,6 +731,9 @@ const Compute: Component = () => {
             <Card>
               <div class="settings-compute-card" aria-busy={modalBusy() ? "true" : undefined}>
                 <div class="settings-compute-provider-row">
+                  <span class="settings-row-logo" aria-hidden="true">
+                    <ProviderLogo id="modal" label="Modal" size="small" />
+                  </span>
                   <div class="flex min-w-0 flex-1 basis-[240px] flex-col gap-0.5">
                     <span class="text-14-medium text-text-strong">Modal</span>
                     <span class="text-12-regular text-text-weak">
@@ -877,6 +881,9 @@ const Compute: Component = () => {
                   return (
                     <div class="settings-list-item" aria-busy={rowBusy() ? "true" : undefined}>
                       <div class="settings-list-row">
+                        <span class="settings-row-logo" aria-hidden="true">
+                          <ProviderLogo id={item.id} label={item.name} size="small" />
+                        </span>
                         <div class="settings-list-copy min-w-0 flex-1">
                           <strong>{item.name}</strong>
                           <span

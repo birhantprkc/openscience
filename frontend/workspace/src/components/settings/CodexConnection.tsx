@@ -7,6 +7,7 @@ import { useGlobalSync } from "@/context/global-sync"
 import { usePlatform } from "@/context/platform"
 import { useProviders } from "@/hooks/use-providers"
 import { credentialChange } from "./credential-change"
+import { ProviderLogo } from "./ProviderLogo"
 
 export const CodexConnection: Component<{
   onError?: (message: string | undefined) => void
@@ -68,6 +69,9 @@ export const CodexConnection: Component<{
     <div class="models-connection-card">
       <div class="settings-row models-compact-row models-connection-row">
         <div class="models-connection-identity">
+          <span class="settings-row-logo" aria-hidden="true">
+            <ProviderLogo id="openai-codex" label="OpenAI" size="small" />
+          </span>
           <div class="flex min-w-0 flex-col gap-0.5">
             <span class="text-14-medium text-text-strong">ChatGPT / Codex</span>
             <span class="text-12-regular text-text-weak">Use models included with your ChatGPT plan.</span>

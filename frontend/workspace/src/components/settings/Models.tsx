@@ -31,6 +31,7 @@ import {
   sameDelegationModel,
 } from "../prompt-capabilities"
 import "./models.css"
+import { ProviderLogo } from "./ProviderLogo"
 
 type AvailableModel = ReturnType<ReturnType<typeof useModels>["list"]>[number]
 
@@ -416,6 +417,9 @@ export default function Models() {
                           {(model) => (
                             <div class="settings-row settings-model-row models-compact-row">
                               <div class="models-model-identity">
+                                <span class="settings-row-logo" aria-hidden="true">
+                                  <ProviderLogo id={model.providerLogo} label={model.provider} size="small" />
+                                </span>
                                 <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                                   <span class="flex min-w-0 items-center gap-2">
                                     <strong class="truncate text-14-medium text-text-strong">{model.label}</strong>

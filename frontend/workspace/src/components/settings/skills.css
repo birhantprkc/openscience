@@ -257,15 +257,16 @@
    and the controls at the right. No glyph column, no third column. */
 .settings-skills .skills-workspace__row {
   min-height: 48px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 20px minmax(0, 1fr) auto auto;
   grid-template-areas:
-    "identity state actions"
-    "details state actions";
+    "glyph identity state actions"
+    "glyph details state actions";
   gap: 2px var(--settings-space-3);
   padding: 8px var(--settings-space-3);
 }
 .settings-skills .skills-workspace__row .skills-workspace__skill-icon {
-  display: none;
+  grid-area: glyph;
+  align-self: center;
 }
 .settings-skills .skills-workspace__identity {
   grid-area: identity;
@@ -306,11 +307,27 @@
   grid-area: actions;
 }
 
-/* Sources and shelf heads keep a flat 16px glyph, muted, no tile. */
+/* Rows, sources and shelf heads share one flat 20px glyph, muted, no tile. */
 .settings-skills .skills-workspace__skill-icon {
   width: 20px;
   height: 20px;
   border-radius: 0;
   background: transparent;
   color: var(--color-icon-muted);
+}
+.settings-skills .skills-workspace__shelf-toggle {
+  font-size: var(--settings-type-row);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--settings-leading-body);
+  color: var(--color-text);
+}
+.settings-skills .skills-workspace__shelf-toggle small,
+.settings-skills .skills-workspace__shelf-toggle span:not(.skills-workspace__skill-icon) {
+  color: var(--color-text-muted);
+  font-size: var(--settings-type-helper);
+  font-weight: var(--font-weight-regular);
+}
+.settings-skills .skills-workspace__shelf-actions button {
+  font-size: var(--settings-type-helper);
+  line-height: var(--settings-leading-helper);
 }

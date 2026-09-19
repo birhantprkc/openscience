@@ -40,6 +40,7 @@ import {
 } from "./connector-form"
 import type { ConnectorCatalogRecord } from "./scientific-tools-state"
 import { loadScientificTools } from "./scientific-tools-loader"
+import { ProviderLogo } from "./ProviderLogo"
 
 type McpConfig = NonNullable<Config["mcp"]>[string]
 type PendingAuthorization = { authorizationUrl: string; flowId: string }
@@ -644,6 +645,11 @@ export default function Connectors() {
                           role="listitem"
                         >
                           <div class="connectors-row">
+                            <span class="settings-row-logo" aria-hidden="true">
+                              <Show when={identity.providerLogo} fallback={<Icon name={identity.icon} size="small" />}>
+                                {(provider) => <ProviderLogo id={provider()} label={identity.label} size="small" />}
+                              </Show>
+                            </span>
                             <div class="connectors-copy">
                               <div class="connectors-copy__title">
                                 <strong>{name}</strong>
@@ -838,6 +844,9 @@ export default function Connectors() {
                         data-expanded={catalogExpanded() === entry.id ? "true" : undefined}
                       >
                         <div class="connectors-catalog__main">
+                          <span class="settings-row-logo" aria-hidden="true">
+                            <ProviderLogo id={entry.id === "s3" ? "aws" : entry.id} label={entry.name} size="small" />
+                          </span>
                           <div class="connectors-catalog__copy">
                             <div class="connectors-catalog__title">
                               <strong>{entry.name}</strong>
@@ -914,6 +923,9 @@ export default function Connectors() {
                   <For each={manualCatalogEntries()}>
                     {(entry) => (
                       <article class="connectors-manual__row" role="listitem">
+                        <span class="settings-row-logo" aria-hidden="true">
+                          <ProviderLogo id={entry.id} label={entry.name} size="small" />
+                        </span>
                         <div class="connectors-catalog__copy">
                           <div class="connectors-catalog__title">
                             <strong>{entry.name}</strong>

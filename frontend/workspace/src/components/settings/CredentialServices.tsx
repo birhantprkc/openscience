@@ -9,6 +9,7 @@ import { settingsApi } from "./api"
 import { customCredentialIdentity } from "./custom-credential"
 import { invalidateCredentials, loadCredentials, type Service } from "./credential-loader"
 import { invalidateScientificTools } from "./scientific-tools-loader"
+import { ProviderLogo } from "./ProviderLogo"
 
 export const CredentialServices: Component<{
   category: "compute" | "integration"
@@ -239,6 +240,9 @@ export const CredentialServices: Component<{
               {(service) => (
                 <div class="settings-list-item">
                   <div class="settings-list-row">
+                    <span class="settings-row-logo" aria-hidden="true">
+                      <ProviderLogo id={service.id} label={service.label} size="small" />
+                    </span>
                     <div class="settings-list-copy">
                       <strong>{service.label}</strong>
                       <span>
@@ -259,7 +263,7 @@ export const CredentialServices: Component<{
                       <Show when={!service.connected && hostSource(service.id)}>
                         <Button
                           size="small"
-                          variant="primary"
+                          variant="secondary"
                           disabled={saving()}
                           onClick={() => void importHost(service)}
                         >

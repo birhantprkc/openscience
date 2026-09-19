@@ -4,7 +4,7 @@
 .connectors-panel {
   --connectors-control-height: 32px;
   --connectors-radius: var(--settings-radius-control);
-  --connectors-row-columns: minmax(180px, 1fr) minmax(92px, auto) auto;
+  --connectors-row-columns: 20px minmax(180px, 1fr) minmax(92px, auto) auto;
 
   min-width: 0;
 }
@@ -103,7 +103,7 @@
 .connectors-catalog__main {
   min-height: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
@@ -202,7 +202,7 @@
 .connectors-manual__row {
   min-height: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
@@ -614,7 +614,7 @@
    dialog change the available width without changing the window. */
 @container settings-main (max-width: 700px) {
   .connectors-panel {
-    --connectors-row-columns: minmax(0, 1fr) auto;
+    --connectors-row-columns: 20px minmax(0, 1fr) auto;
   }
 
   .connectors-status {
@@ -640,7 +640,7 @@
   }
 
   .connectors-catalog__main {
-    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-columns: 20px minmax(0, 1fr);
   }
 
   .connectors-catalog__actions {
@@ -649,11 +649,11 @@
   }
 
   .connectors-manual__row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 20px minmax(0, 1fr);
   }
 
   .connectors-manual__row .connectors-catalog__actions {
-    grid-column: 1;
+    grid-column: 2;
   }
 
   .connectors-catalog__details {

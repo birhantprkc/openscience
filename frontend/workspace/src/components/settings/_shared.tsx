@@ -121,11 +121,17 @@ export const SettingsRow: ParentComponent<{
   title: string
   description?: JSX.Element
   status?: JSX.Element
+  logo?: JSX.Element
   onClick?: () => void
   ariaLabel?: string
 }> = (props) => {
   const body = (
     <>
+      <Show when={props.logo}>
+        <span class="settings-row-logo" aria-hidden="true">
+          {props.logo}
+        </span>
+      </Show>
       <RowCopy title={props.title} description={props.description} />
       <Show when={props.status}>
         <span class="settings-row-status">{props.status}</span>

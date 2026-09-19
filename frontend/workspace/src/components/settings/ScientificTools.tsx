@@ -13,6 +13,7 @@ import {
 } from "./scientific-tools-state"
 import { loadScientificTools, setupScientificTool } from "./scientific-tools-loader"
 import "./scientific-tools.css"
+import { ScientificToolLogo } from "./ScientificToolLogo"
 
 export default function ScientificTools() {
   const server = useServer()
@@ -187,6 +188,9 @@ function CapabilityRow(props: {
   }
   return (
     <article class="settings-row settings-row--grammar scientific-tool-row" data-target={target()} role="listitem">
+      <span class="settings-row-logo">
+        <ScientificToolLogo id={props.record.id} name={props.record.name} hosted={target() === "nvidia"} />
+      </span>
       <RowCopy
         title={props.record.name}
         description={

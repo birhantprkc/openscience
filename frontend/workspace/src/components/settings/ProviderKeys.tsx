@@ -8,6 +8,8 @@ import { useGlobalSDK } from "@/context/global-sdk"
 import { useGlobalSync } from "@/context/global-sync"
 import { useProviders } from "@/hooks/use-providers"
 import { MODEL_PROVIDERS, MODEL_PROVIDER_LABELS, modelProvider } from "./model-providers"
+import { ProviderLogo } from "./ProviderLogo"
+import { Icon } from "@synsci/ui/icon"
 
 /**
  * `note` says where a key that this panel cannot delete actually lives, so the
@@ -138,6 +140,9 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
     <div class="models-provider-keys">
       <div class="settings-row models-compact-row models-provider-key-heading">
         <div class="models-provider-identity">
+          <span class="settings-row-logo" aria-hidden="true">
+            <Icon name="providers" size="small" />
+          </span>
           <div class="models-provider-copy">
             <span class="text-14-medium text-text-strong">Provider API keys</span>
             <span class="text-12-regular text-text-weak">Stored in the owner-only local auth file.</span>
@@ -224,6 +229,9 @@ export function ProviderKeys(props: { onError?: (error: string | undefined) => v
             {(item) => (
               <div class="settings-row models-compact-row models-provider-row">
                 <div class="models-provider-identity min-w-0 flex-1 basis-[220px]">
+                  <span class="settings-row-logo" aria-hidden="true">
+                    <ProviderLogo id={item.id} label={MODEL_PROVIDER_LABELS[item.id] ?? item.id} size="small" />
+                  </span>
                   <div class="models-provider-copy">
                     <span class="truncate text-14-medium text-text-strong">
                       {MODEL_PROVIDER_LABELS[item.id] ?? item.id}

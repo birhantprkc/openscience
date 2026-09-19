@@ -57,7 +57,7 @@ const SETTINGS_STYLES = `
   --settings-type-title: 16px;
   --settings-type-heading: 12px;
   --settings-type-body: 13px;
-  --settings-type-row: 14px;
+  --settings-type-row: 12px;
   --settings-type-helper: 12px;
   --settings-leading-title: 22px;
   --settings-leading-body: 20px;
@@ -1533,8 +1533,38 @@ const SETTINGS_STYLES = `
   color: var(--color-text-muted);
 }
 .settings-dialog .settings-provider-logo[data-size="small"] {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+}
+/* The leading slot of a row: a brand mark or a glyph, 20px, flat, the same
+   in every list. Glyphs are muted; brand marks keep their colors. */
+.settings-row-logo {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  overflow: hidden;
+  color: var(--color-icon-muted);
+}
+.settings-row-logo img,
+.settings-row-logo svg,
+.settings-row-logo .settings-provider-logo,
+.settings-row-logo .scientific-tool-logo {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.settings-row-logo .scientific-tool-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-row-logo [data-component="icon"] {
+  width: 16px;
+  height: 16px;
 }
 .settings-dialog .settings-provider-logo img,
 .settings-dialog .settings-provider-logo svg,

@@ -10,7 +10,7 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Changed
 
-- **Every Customize tab reads like General.** One row grammar across all thirteen tabs: a 14px title, one muted line beneath it, and one control at the right. Skills, Tools, Connectors, Credentials, Compute, Local models, Storage, Sandbox, Network, Permissions, Models and Ace lose their glyph columns, brand logos, tags, pills, counts and monospace titles; statuses are plain text, section headings carry no buttons, and titles sit on the content's left edge.
+- **Every Customize tab reads like General.** One row grammar across all thirteen tabs: General's 12px medium title, one muted line beneath it, a 20px brand mark or glyph at the left where a row has one, and one control at the right. Tags, pills, counts, header buttons and monospace titles are gone; statuses are plain text and titles sit on the content's left edge.
 - **Direct hosting for Ace OpenAI and Google models.** GPT-6 Astra, GPT-5.6 Sol/Terra/Luna, and graph embeddings use Azure. Gemini chat and Nano Banana Pro use Google's Gemini API. The gateway preserves existing model selections and applies the provider token rates plus the existing funding fee. Rates identify the host; Fast is unavailable on these routes. Nano Banana returns PNG. Direct API-key and ChatGPT connections remain available.
 - **Compute approvals are bounded by time, not bound to one plan.** A Modal
   job used to ask on the SHA-256 of its exact plan, so "this session", "this
