@@ -322,7 +322,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const confirmed = await confirmDialog(dialog, {
         title: "Enable Full access?",
         message:
-          "Full access disables the execution sandbox and routine action prompts. Paid compute still asks once: approve a Modal job for the session or project and its time allowance covers the jobs that follow, until it is spent.",
+          "Full access disables the execution sandbox and routine action prompts, including package installs. Paid compute still asks once: approve a Modal job for the session or project and its time allowance covers the jobs that follow, until it is spent.",
         confirmLabel: "Enable Full access",
         danger: true,
       })

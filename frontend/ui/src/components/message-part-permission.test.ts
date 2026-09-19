@@ -211,8 +211,8 @@ describe("request card", () => {
     })
     try {
       expect(mounted.card.getAttribute("data-kind")).toBe("environment-mutation")
-      expect(mounted.title()).toBe("Install lightgbm==4.6.0, xgboost==3.0.2 in the PYTHON environment")
-      expect(mounted.subline()).toBe("openscience-default · pip · PYTHON kernel restarts")
+      expect(mounted.title()).toBe("Install lightgbm==4.6.0, xgboost==3.0.2 in Python")
+      expect(mounted.subline()).toBe("openscience-default · pip · Python kernel restarts")
       expect(mounted.details()).toContain("Every scope applies only to this exact requested change")
     } finally {
       mounted.dispose()

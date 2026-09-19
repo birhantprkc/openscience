@@ -59,6 +59,13 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Fixed
 
+- **Full access no longer asks for kernel package installs.** `pip install`
+  through the shell ran without a card under Full access while the same
+  install through the Python or R kernel asked on every plan; the prompt was
+  an inconsistency, not a boundary, and is gone. Ask risky still asks for
+  each exact change, and paid compute keeps its card. The card also names
+  the packages ("Install pymupdf, pdfplumber in Python") instead of "the
+  PYTHON environment".
 - **The deliverables checklist stays anchored to your first request.** Every
   prompt carries an internal marker, so the anchor that filtered on it never
   saw an earlier message, and a background worker's report (arriving as a

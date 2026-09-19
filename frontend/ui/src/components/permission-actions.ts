@@ -254,12 +254,19 @@ export function describeRequest(metadata: Metadata, labels: Labels): RequestMode
           ? "Remove"
           : "Update"
     const packages: string[] = Array.isArray(mutation.packages) ? mutation.packages.map(String) : []
-    const language = String(mutation.language ?? "").toUpperCase()
+    const language =
+      mutation.language === "r" ? "R" : mutation.language === "python" ? "Python" : String(mutation.language ?? "")
+    const what =
+      mutation.operation === "package_install"
+        ? "packages"
+        : mutation.operation === "package_remove"
+          ? "packages"
+          : "environment"
     return {
       kind: "environment-mutation",
       title: packages.length
-        ? `${operation} ${packages.slice(0, 3).join(", ")}${packages.length > 3 ? ` +${packages.length - 3}` : ""} in the ${language} environment`
-        : `${operation} the ${language} environment`,
+        ? `${operation} ${packages.slice(0, 3).join(", ")}${packages.length > 3 ? ` +${packages.length - 3}` : ""} in ${language}`
+        : `${operation} ${what} in the ${language} environment`,
       subline: [mutation.environment, mutation.manager, `${language} kernel restarts`].filter(Boolean).join(" · "),
       rows: [
         ["Language", language],

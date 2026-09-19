@@ -156,6 +156,8 @@ export namespace KernelEnvironmentMutation {
     manager: string
     digest: string
     restart: true
+    /** The package names the command names, best effort, for the card. */
+    packages?: string[]
   }
 
   function normalized(code: string) {
@@ -236,6 +238,7 @@ export namespace KernelEnvironmentMutation {
     const digest = createHash("sha256")
       .update(JSON.stringify({ language: input.language, environment: input.environment, operation, code: input.code }))
       .digest("hex")
+    const packages = named(code, operation)
     return {
       language: input.language,
       environment: input.environment,
@@ -243,7 +246,39 @@ export namespace KernelEnvironmentMutation {
       manager,
       digest,
       restart: true,
+      ...(packages.length ? { packages } : {}),
     }
+  }
+
+  /** The package names after the install/remove verb, up to eight, without
+   * flags, paths or R quoting: enough to say "Install pymupdf, pdfplumber". */
+  function named(code: string, operation: Plan["operation"]) {
+    if (operation === "environment_update") return []
+    const tokens = code.split(" ")
+    const verbs = new Set([
+      "install",
+      "download",
+      "uninstall",
+      "add",
+      "remove",
+      "install.packages",
+      "pkg_install",
+      "pkg_remove",
+      "remove.packages",
+    ])
+    const at = tokens.findIndex((token) => verbs.has(token.replace(/^.*::/, "")))
+    if (at < 0) return []
+    const names: string[] = []
+    for (const token of tokens.slice(at + 1)) {
+      if (token.startsWith("-") || /^[a-z]+:\/\//.test(token)) continue
+      const name = token.replace(/^c\(|\)$/g, "").replace(/^["']|["']$/g, "")
+      if (!/^[a-z0-9][a-z0-9_.+-]*(?:\[[a-z0-9_,-]+\])?(?:[=<>!~]=?[a-z0-9_.*-]+)?$/i.test(name)) continue
+      if (["python", "python3", "sys.executable", "-m", "pip", "uv", "conda", "mamba", "poetry"].includes(name))
+        continue
+      names.push(name)
+      if (names.length === 8) break
+    }
+    return names
   }
 
   /** Stable, app-managed package root used when no project interpreter owns a
@@ -354,6 +389,7 @@ export namespace KernelEnvironmentMutation {
           manager: plan.manager,
           plan_digest: plan.digest,
           restart: plan.restart,
+          ...(plan.packages?.length ? { packages: plan.packages } : {}),
           warning:
             "This may contact package repositories and changes packages in the selected environment. The affected runtime restarts after a successful change, so in-memory variables are cleared.",
         },

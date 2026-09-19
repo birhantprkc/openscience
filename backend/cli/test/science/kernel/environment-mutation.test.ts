@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { Instance } from "../../../src/project/instance"
+import { PermissionNext } from "../../../src/permission/next"
 import { KernelEnvironmentMutation, rankPython } from "../../../src/science/kernel/environment-mutation"
 import { KernelRuntime, type KernelIdentity } from "../../../src/science/kernel/registry"
 import { PythonTool } from "../../../src/tool/notebook"
@@ -82,6 +83,47 @@ test("recognizes Python and R package/environment mutations as exact immutable p
     KernelEnvironmentMutation.detect({ language: "python", environment: "python", code: "import numpy as np" }),
   ).toBeUndefined()
   expect(python?.digest).not.toBe(r?.digest)
+  // The card names what is being installed, not just the language.
+  expect(python?.packages).toEqual(["numpy==2.3.2"])
+  expect(r?.packages).toEqual(["survival"])
+  expect(
+    KernelEnvironmentMutation.detect({
+      language: "python",
+      environment: "python",
+      code: "!pip install --quiet --no-cache-dir pymupdf pdfplumber 'tectonic>=0.15'",
+    })?.packages,
+  ).toEqual(["pymupdf", "pdfplumber", "tectonic"])
+  expect(KernelEnvironmentMutation.permission(python!).metadata.environment_mutation.packages).toEqual(["numpy==2.3.2"])
+})
+
+test("Full access allows a kernel environment change without a card, as it already does through the shell", () => {
+  expect(
+    PermissionNext.modeAction({ mode: "full", permission: "environment_mutation", configured: "ask", granted: "ask" }),
+  ).toBe("allow")
+  expect(
+    PermissionNext.modeAction({
+      mode: "full",
+      permission: "environment_mutation",
+      configured: "deny",
+      granted: "allow",
+    }),
+  ).toBe("deny")
+  // Ask risky keeps asking on the exact plan.
+  expect(
+    PermissionNext.modeAction({
+      mode: "approve",
+      permission: "environment_mutation",
+      configured: "ask",
+      granted: "ask",
+    }),
+  ).toBe("ask")
+  // Paid compute still asks in Full access unless an allowance covers it.
+  expect(PermissionNext.modeAction({ mode: "full", permission: "modal", configured: "ask", granted: "ask" })).toBe(
+    "ask",
+  )
+  expect(PermissionNext.modeAction({ mode: "full", permission: "modal", configured: "ask", granted: "allow" })).toBe(
+    "allow",
+  )
 })
 
 test("recognizes pip flags without backtracking on adversarial separators", () => {

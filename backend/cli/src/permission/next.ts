@@ -112,6 +112,10 @@ export namespace PermissionNext {
     if (input.configured === "deny") return "deny"
     const level = risk(input.permission, input.metadata)
     if (input.mode === "full" && input.permission === "bash") return input.configured
+    // Full access already runs `pip install` through the shell without a
+    // card; the same change through the kernel asking on every plan was a
+    // prompt, not a boundary. Paid compute and hosted requests keep theirs.
+    if (input.mode === "full" && input.permission === "environment_mutation") return "allow"
     if (level === "unknown") return "ask"
     if (input.mode === "ask" && level !== "passive") return "ask"
     if (input.mode === "approve" && input.permission === "bash" && level === "risky") return "ask"
