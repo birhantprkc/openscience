@@ -13,14 +13,16 @@ test("skills can be searched and disabled", async ({ page, gotoSession }) => {
   await gotoSession()
   const dialog = await openSkills(page)
 
-  await expect(dialog.getByText(/\d+ active/).first()).toBeVisible()
-  await expect(dialog.getByText(/\d+ in library/).first()).toBeVisible()
+  // The tallies live on the view switch: "All 368", "Core 18", ...
+  await expect(dialog.getByRole("button", { name: /^All \d+$/ })).toBeVisible()
+  await expect(dialog.getByRole("button", { name: /^Library \d+$/ })).toBeVisible()
 
   const search = dialog.getByPlaceholder("Search skills")
   // Exercise search against the catalog the runtime actually returned. Skill
   // bundles can differ across source, packaged, and signed-in installations.
   const firstSkill = dialog.getByRole("listitem").first()
-  const slug = (await firstSkill.locator("code").innerText()).trim()
+  // The slug also renders in the row's purpose line; read the durable text.
+  const slug = ((await firstSkill.locator("code").textContent()) ?? "").trim()
   expect(slug).toMatch(/^\/[a-z0-9-]+$/)
   const knownSkill = slug.slice(1)
   await search.fill(knownSkill)
