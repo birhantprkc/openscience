@@ -59,6 +59,7 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ### Fixed
 
+- **A declined reload card is named.** When Ace pauses because the Wallet's card was declined, the message says so and points at the card update instead of "the last charge failed recently" or a reload that never completes.
 - **Full access no longer asks for kernel package installs.** `pip install`
   through the shell ran without a card under Full access while the same
   install through the Python or R kernel asked on every plan; the prompt was

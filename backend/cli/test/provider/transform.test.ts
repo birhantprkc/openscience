@@ -2708,6 +2708,27 @@ describe("ProviderTransform.error for the managed gateway's payment-required con
       }),
     )
     expect(failed).toContain("The last automatic reload failed (card_declined).")
+    // The gateway's own word for a decline, as a finished attempt or as the
+    // reason a new one is waiting, names the repair: update the card.
+    for (const reload of [
+      { state: "available", pending: false, attempt_state: "failed", error_class: "payment_failed" },
+      { state: "available", pending: false, attempt_state: null, blocked_reason: "card_declined" },
+    ]) {
+      const declined = ProviderTransform.error(
+        "openrouter",
+        managed({
+          ...base,
+          held_cents: 0,
+          recovery: {
+            kind: "ace_reload",
+            retryable: false,
+            action: "add_wallet_funds_or_update_payment_method",
+            ace_reload: reload,
+          },
+        }),
+      )
+      expect(declined).toContain("The card on file was declined; auto reload runs again as soon as the card is updated")
+    }
   })
 
   test("a monthly usage limit names the limit and the spend", () => {

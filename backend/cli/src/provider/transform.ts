@@ -1361,9 +1361,11 @@ export namespace ProviderTransform {
     const reloadNote = iife(() => {
       if (!reload || reload.state !== "available") return ""
       if (reload.pending === true) return " A Wallet reload is on its way."
+      const reason = typeof reload.blocked_reason === "string" ? reload.blocked_reason : ""
+      if (reason === "card_declined" || (reload.attempt_state === "failed" && reload.error_class === "payment_failed"))
+        return ` The card on file was declined; auto reload runs again as soon as the card is updated at ${BILLING_URL}.`
       if (typeof reload.error_class === "string" && reload.error_class && reload.attempt_state === "failed")
         return ` The last automatic reload failed (${reload.error_class}).`
-      const reason = typeof reload.blocked_reason === "string" ? reload.blocked_reason : ""
       const reasons: Record<string, string> = {
         not_enrolled: "auto reload is not set up for this Wallet",
         stripe_disabled: "payments are unavailable right now",
