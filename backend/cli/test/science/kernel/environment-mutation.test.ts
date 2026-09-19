@@ -1,11 +1,10 @@
 import { expect, test } from "bun:test"
 import { Instance } from "../../../src/project/instance"
-import { PermissionNext } from "../../../src/permission/next"
 import { KernelEnvironmentMutation, rankPython } from "../../../src/science/kernel/environment-mutation"
 import { KernelRuntime, type KernelIdentity } from "../../../src/science/kernel/registry"
 import { PythonTool } from "../../../src/tool/notebook"
 import { RTool } from "../../../src/tool/rkernel"
-import type { PermissionNext } from "../../../src/permission/next"
+import { PermissionNext } from "../../../src/permission/next"
 import { executionSession, tmpdir } from "../../fixture/fixture"
 import fs from "node:fs/promises"
 
