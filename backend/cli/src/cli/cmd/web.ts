@@ -7,7 +7,8 @@ import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { openUrl } from "../../util/open-url"
 import { WEB_INDEX } from "../../web/assets"
 import { probeProtectedFolderAccess } from "../../file/protected-folder-access"
-import { GracefulShutdown } from "../../process/graceful-shutdown"
+import { stopServer } from "../server-stop"
+import { ShutdownSignal } from "../../process/shutdown-signal"
 import { Global } from "../../global"
 import {
   LOCAL_WORKSPACE_PORTS,
@@ -127,24 +128,14 @@ export const WebCommand = cmd({
     // access. System Settings opens only after a deliberate UI action.
     await announceFdaIfNeeded()
 
-    // Wait for a termination signal. Without an explicit handler Bun keeps
-    // the process alive (the catch-all promise never resolves) and Ctrl+C
-    // is ignored.
-    await new Promise<void>((resolve) => {
-      const stop = () => resolve()
-      process.once("SIGINT", stop)
-      process.once("SIGTERM", stop)
-    })
+    // Wait for a termination signal. Claiming it makes this the process's one
+    // signal owner: without a handler Bun keeps the process alive (the
+    // catch-all promise never resolves) and Ctrl+C is ignored, and without the
+    // claim the kernel hooks would end the process before the shutdown below.
+    await new Promise<void>((resolve) => ShutdownSignal.claim(() => resolve()))
     // Force-close sockets, then await the same bounded runtime/ledger disposal
-    // used by the authenticated desktop handoff. A final watchdog still keeps
-    // a broken native transport from trapping shutdown forever.
-    const watchdog = setTimeout(() => process.exit(1), 10_000)
-    watchdog.unref?.()
-    try {
-      await server.stop(true)
-      await GracefulShutdown.run({ timeoutMs: 8_000 })
-    } finally {
-      clearTimeout(watchdog)
-    }
+    // used by the authenticated desktop handoff, on a deadline that keeps a
+    // broken native transport from trapping shutdown forever.
+    await stopServer(server)
   },
 })
