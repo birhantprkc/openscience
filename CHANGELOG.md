@@ -8,6 +8,10 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ## Unreleased
 
+### Added
+
+- **The desktop app installs its command-line tool.** **Customize → General → Command line tool** links `~/.openscience/bin/openscience` to the app's own copy and adds that folder to your shell's startup file the way the standalone installer does, so `openscience` in a new terminal opens the running app. The row says whether the tool is installed and on your PATH, and shows the line to add when it is not. On every launch the app re-points a link of its own that names a moved or reinstalled bundle; it never creates a link you did not ask for and never replaces an `openscience` it did not create. `openscience uninstall` run from that link removes the link and the PATH line. The Linux AppImage runs from a temporary mount and cannot be linked, so the row says to use the standalone installer there; Windows is unchanged.
+
 ### Changed
 
 - **The update notice offers only what this build can do.** Off macOS, and in an unpackaged build, there is no in-app download, so the launch notice no longer promises a one-press **Download and restart** it cannot honour. It says the release is available and offers **Download installer**, which opens the release page; the macOS app keeps the one press. Customize → General says the same thing as the notice, in its own words for its own button.
