@@ -93,6 +93,14 @@ const SETTINGS_STYLES = `
 .settings-dialog textarea {
   font-family: inherit;
 }
+/* A control that opts into the monospace utility (Storage's data-directory
+   path, Connectors' SSH/host fields via FormField's mono prop) keeps it:
+   .font-mono is a Tailwind utility in the low-priority utilities layer, so
+   the dialog's own unlayered font-family: inherit reset above otherwise
+   always wins over it regardless of specificity. */
+.settings-dialog .font-mono {
+  font-family: var(--font-mono);
+}
 .settings-dialog .atlas-section-label,
 .settings-section-label {
   color: var(--color-text-muted);
@@ -258,15 +266,18 @@ const SETTINGS_STYLES = `
 .settings-nav__sections::-webkit-scrollbar {
   display: none;
 }
-/* Each group is named once, in the section-label voice, above its rows. */
+/* Each group is named once, in the section-label voice, above its rows.
+   Sentence case and --color-text-faint match the project sidebar's own
+   group labels (.session-sidebar__group-label / .session-sidebar__label) —
+   no text-transform: the design contract forbids forcing ordinary interface
+   copy into a different case. */
 .settings-nav__label {
   padding: 0 var(--settings-space-2) 4px;
-  color: var(--color-text-muted);
+  color: var(--color-text-faint);
   font-size: 11px;
   font-weight: var(--font-weight-medium);
   line-height: 16px;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 .settings-nav__section {
   display: flex;
