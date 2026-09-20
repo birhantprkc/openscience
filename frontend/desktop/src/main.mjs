@@ -7,7 +7,7 @@ import net from "node:net"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
-import { app, BrowserWindow, dialog, Menu, session, shell } from "electron"
+import { app, BrowserWindow, dialog, Menu, nativeTheme, session, shell } from "electron"
 import {
   apply as applyUpdate,
   current as currentUpdate,
@@ -23,9 +23,11 @@ import {
 } from "./updater.mjs"
 import { acknowledgedStartupResult, startupUpdateState } from "./update-state.mjs"
 import { disposeRuntime } from "./runtime-disposal.mjs"
+import { mergeAppearance, readAppearance, resolveAppearance, splashQuery, writeAppearance } from "./appearance.mjs"
 
 const execute = promisify(execFile)
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")
+const splashPage = fileURLToPath(new URL("./splash/splash.html", import.meta.url))
 const windows = new Set()
 // The only web permissions the workspace uses; every other request (camera,
 // microphone, geolocation, MIDI, ...) is denied without prompting.
@@ -57,6 +59,50 @@ const state = {
   updateRelaunch: undefined,
   updateStartupFailure: undefined,
   stopTask: undefined,
+  /** The scheme and per-mode colours the workspace last reported; the splash and window paint from it before it mounts. */
+  appearance: undefined,
+}
+
+function appearanceFile() {
+  return path.join(app.getPath("userData"), "appearance.json")
+}
+
+function appearance() {
+  // Resolved at each paint, so a System scheme follows the OS as it is now.
+  return resolveAppearance(state.appearance, nativeTheme.shouldUseDarkColors)
+}
+
+// The workspace owns its theme. Reading the tokens it resolved, and the scheme
+// choice behind them, keeps the next launch's splash and window on the colours
+// the workspace will paint, whichever theme or scheme the user picked, instead
+// of a fixed dark that flashes on a light workspace. The storage key is the
+// workspace's own (STORAGE_KEYS in frontend/ui/src/theme/context.tsx).
+async function rememberAppearance(window) {
+  // A window already torn down throws on webContents itself, not only in the script.
+  const reported = await Promise.resolve()
+    .then(() =>
+      window.webContents.executeJavaScript(
+        `(() => {
+          const style = getComputedStyle(document.documentElement)
+          let scheme = null
+          try {
+            scheme = localStorage.getItem("openscience-color-scheme")
+          } catch {}
+          return {
+            mode: document.documentElement.dataset.colorScheme,
+            scheme,
+            theme: document.documentElement.dataset.theme,
+            background: style.getPropertyValue("--background-base").trim(),
+            foreground: style.getPropertyValue("--text-strong").trim(),
+          }
+        })()`,
+      ),
+    )
+    .catch(() => undefined)
+  const next = mergeAppearance(state.appearance, reported)
+  if (!next) return
+  state.appearance = next
+  await writeAppearance(appearanceFile(), next)
 }
 
 function external(value) {
@@ -679,9 +725,7 @@ async function bootstrap(splash) {
       "OpenScience is running from the downloaded disk image. Install it in Applications now so future updates work automatically.",
   })
   if (prompt.response !== 0) return false
-  await splash.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent('<main style="background:#11110f;color:#e8e5dc;display:grid;font:14px system-ui;height:100vh;margin:0;place-items:center"><div><h1 style="font-size:20px;margin:0 0 8px">OpenScience</h1><p style="color:#9d998f;margin:0">Installing in Applications…</p></div></main>')}`,
-  )
+  await splash.loadFile(splashPage, { query: splashQuery(appearance(), "install") })
   let staged
   try {
     staged = await stageCurrent({
@@ -911,7 +955,7 @@ async function createWindow() {
     minHeight: 640,
     show: false,
     title: "OpenScience",
-    backgroundColor: "#11110f",
+    backgroundColor: appearance().background,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -922,6 +966,7 @@ async function createWindow() {
   window.once("ready-to-show", () => window.show())
   window.on("page-title-updated", dock)
   window.on("focus", dock)
+  window.on("close", () => void rememberAppearance(window))
   window.on("closed", () => {
     windows.delete(window)
     if (!state.exiting) dock()
@@ -948,6 +993,7 @@ async function createWindow() {
       .catch(() => false)
     if (mounted) {
       dock()
+      void rememberAppearance(window)
       return window
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -982,22 +1028,21 @@ app
       }
       applicationMenu()
       await updates()
+      state.appearance = await readAppearance(appearanceFile())
       splash = new BrowserWindow({
         width: 520,
         height: 300,
         resizable: false,
         show: false,
         title: "OpenScience",
-        backgroundColor: "#11110f",
+        backgroundColor: appearance().background,
         webPreferences: {
           contextIsolation: true,
           nodeIntegration: false,
           sandbox: true,
         },
       })
-      await splash.loadURL(
-        `data:text/html;charset=utf-8,${encodeURIComponent('<main style="background:#11110f;color:#e8e5dc;display:grid;font:14px system-ui;height:100vh;margin:0;place-items:center"><div><h1 style="font-size:20px;margin:0 0 8px">OpenScience</h1><p style="color:#9d998f;margin:0">Starting your local workspace…</p></div></main>')}`,
-      )
+      await splash.loadFile(splashPage, { query: splashQuery(appearance(), "start") })
       splash.show()
       if (await bootstrap(splash)) return
       if (process.platform === "win32") {
