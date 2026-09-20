@@ -145,22 +145,6 @@ def _get_next_rid(rels_path: Path) -> int:
     return max_rid + 1
 
 
-def _has_relationship(rels_path: Path, target: str) -> bool:
-    dom = defusedxml.minidom.parseString(rels_path.read_text(encoding="utf-8"))
-    return any(
-        rel.getAttribute("Target") == target
-        for rel in dom.getElementsByTagName("Relationship")
-    )
-
-
-def _has_content_type(ct_path: Path, part_name: str) -> bool:
-    dom = defusedxml.minidom.parseString(ct_path.read_text(encoding="utf-8"))
-    return any(
-        o.getAttribute("PartName") == part_name
-        for o in dom.getElementsByTagName("Override")
-    )
-
-
 _COMMENT_RELS = [
     ("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments", "comments.xml"),
     ("http://schemas.microsoft.com/office/2011/relationships/commentsExtended", "commentsExtended.xml"),
