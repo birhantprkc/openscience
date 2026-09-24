@@ -19,7 +19,7 @@ const Entry = z.object({
   id: z.string(),
   available: z.boolean().optional(),
   upstream_provider: z.enum(["anthropic", "gemini", "xai", "meta", "openrouter"]),
-  hosting_provider: z.enum(["azure", "openai", "gemini", "xai", "bedrock", "openrouter"]).optional(),
+  hosting_provider: z.enum(["azure", "openai", "anthropic", "gemini", "xai", "bedrock", "openrouter"]).optional(),
   context_length: Tokens,
   max_output_tokens: Tokens.optional(),
   context_options: z.array(Tokens).max(8).optional(),
@@ -37,7 +37,7 @@ const Entry = z.object({
   fast_mode_details: z
     .object({
       available: z.boolean(),
-      hosting_provider: z.enum(["azure", "openai", "gemini", "xai", "bedrock", "openrouter"]).optional(),
+      hosting_provider: z.enum(["azure", "openai", "anthropic", "gemini", "xai", "bedrock", "openrouter"]).optional(),
       transport: z
         .union([z.object({ service_tier: z.literal("priority") }), z.object({ speed: z.literal("fast") })])
         .optional(),
@@ -219,7 +219,11 @@ export namespace ManagedPricing {
       // Device keys deliberately cannot read the browser administration API.
       const endpoint = `${managedApiBase()}/api/cli/model-catalog?provider=openrouter`
       const response = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${selected.api_key}`, ...OpenScience.fundingHeaders(selected) },
+        headers: {
+          Authorization: `Bearer ${selected.api_key}`,
+          ...OpenScience.fundingHeaders(selected),
+          "OpenScience-Catalog-Version": "2",
+        },
         signal: controller.signal,
         redirect: "error",
       })
