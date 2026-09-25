@@ -8,6 +8,8 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ## Unreleased
 
+- Expand account, privacy, and usage documentation; clarify prepaid Ace access, fixed optional reloads, and current account requirements.
+
 ### Added
 
 - **Customize → Usage** sits below Ace with managed, API-key, local-model, subscription, and historical activity views. Filter by dates and model, inspect daily totals, and export a CSV of the selected usage. Managed totals use confirmed Wallet receipts; saved conversation usage uses recorded access routes and provider cost estimates.

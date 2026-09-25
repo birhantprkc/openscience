@@ -55,7 +55,7 @@ bun run --cwd frontend/docs check
 bun run --cwd frontend/docs export
 ```
 
-`script/catalog.ts` generates `skill-library.mdx` from all bundled SKILL.md files, `databases.mdx` from the registered scientific database catalog, and `tool-catalog.mdx` from all scientific capability manifests. Regenerate after changing these inventories; the checker rejects stale output.
+`script/catalog.ts` generates `skill-library.mdx` from all bundled SKILL.md files, `databases.mdx` from the registered scientific database catalog, `tool-catalog.mdx` from all scientific capability manifests, and `ace-models.mdx` from the reviewed managed model roster. Regenerate after changing these inventories; the checker rejects stale output.
 
 `script/check.ts` validates page coverage, redirects, internal links, section anchors, repository file links, and JSON examples against the product configuration or run-event schema.
 
