@@ -3,6 +3,7 @@ import { registry } from "../../../backend/cli/src/science/connectors"
 import { capabilityManifests } from "../../../backend/cli/src/science/capability/manifests"
 import { coreManifests } from "../../../backend/cli/src/science/capability/manifests/core"
 import { bioNemoManifests } from "../../../backend/cli/src/science/capability/manifests/bionemo"
+import { MANAGED_OPENROUTER_MODELS, MANAGED_MODEL_DETAILS } from "../../../backend/cli/src/provider/managed-catalog"
 
 const root = path.resolve(import.meta.dir, "../../..")
 const content = path.join(root, "frontend/docs/src/content/openscience")
@@ -249,10 +250,62 @@ const catalog = [
   "",
 ].join("\n")
 
+const models = [
+  "---",
+  'title: "Ace model directory"',
+  'description: "Browse the reviewed managed model identities and token limits shipped with this documentation version."',
+  "---",
+  "",
+  "This directory is generated from the reviewed Ace roster shipped with OpenScience. It contains " +
+    MANAGED_OPENROUTER_MODELS.length +
+    " chat models. Live account access, route availability, pricing, and supported controls still come from the managed service. A listed model is not a guarantee that it is available to your account at this moment.",
+  "",
+  "## Choose and verify a model",
+  "",
+  "Open **Customize → Models → Rates and limits**, or use the conversation model picker. Confirm the funding label, selected speed, context option, and current rates. Copy an exact CLI identifier from `openscience models --flat`; service model IDs in the table below are not complete CLI provider/model selections.",
+  "",
+  "Context and maximum output are token limits, not a promise that both can be used at their maximum simultaneously. Runtime metadata and the selected route may constrain them further. A pricing threshold can differ from the context window. GPT-6 models also have a reviewed maximum input of 922,000 tokens.",
+  "",
+  "## Reviewed chat roster",
+  "",
+  "| Model | Service model ID | Context tokens | Maximum output tokens |",
+  "| --- | --- | ---: | ---: |",
+  ...MANAGED_OPENROUTER_MODELS.map((id) => {
+    const model = MANAGED_MODEL_DETAILS[id]
+    return (
+      "| " +
+      model.name +
+      " | `" +
+      id +
+      "` | " +
+      model.context.toLocaleString("en-US") +
+      " | " +
+      model.output.toLocaleString("en-US") +
+      " |"
+    )
+  }),
+  "",
+  "## Effort and Fast mode",
+  "",
+  "Supported effort choices vary by model and connection. GPT-6 Astra, Claude Opus 5.5, and Claude Fable 5.1 expose Low through Max; Sol and Luna also support a no-reasoning option. The picker is authoritative for the route you selected. Research effort (Normal or Ultra) and worker delegation are separate controls from model reasoning effort.",
+  "",
+  "Ace Fast for the GPT-6 family uses its separately verified priority route and pricing. Claude and Gemini do not offer Ace Fast. Fast only appears after route metadata confirms support; Refresh options reloads metadata without sending a paid inference request.",
+  "",
+  "## Images and retired models",
+  "",
+  "The managed image route is Nano Banana Pro, documented in [Image generation](/openscience/image-generation). Selecting a chat model does not replace the image tool's separate route, requirements, or billing.",
+  "",
+  "Existing conversations retain their saved model identities. If a prior model is unavailable, select a current model before continuing. Your own provider can expose a different roster; do not infer Ace availability from a provider-key catalog.",
+  "",
+  "See [Ace and your account](/openscience/ace) for hosting and funding, [Models and providers](/openscience/models) for selection and reasoning, [Pricing](/openscience/pricing) for Wallet rates, and [Usage reports](/openscience/usage) for actual activity.",
+  "",
+].join("\n")
+
 for (const [name, source] of [
   ["skill-library.mdx", library],
   ["databases.mdx", databases],
   ["tool-catalog.mdx", catalog],
+  ["ace-models.mdx", models],
 ]) {
   const file = Bun.file(path.join(content, name))
   if (check) {
@@ -269,5 +322,7 @@ console.log(
         registry.catalog().length +
         " databases, and " +
         scientific.length +
-        " scientific capabilities.",
+        " scientific capabilities, and " +
+        MANAGED_OPENROUTER_MODELS.length +
+        " Ace models.",
 )

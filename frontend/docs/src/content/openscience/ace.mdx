@@ -3,7 +3,7 @@ title: "Ace and your account"
 description: "Set up managed access, choose a funding workspace, and manage your Wallet."
 ---
 
-Ace provides managed models and research search through one purchased Wallet. You do not need separate model-provider keys to use it.
+Ace provides managed models and research search using purchased Wallet funds or valid promotional credits. Promotional credit is separate from purchased funds and keeps its expiry. You do not need separate model-provider keys to use it.
 
 Ace's GPT-6 Astra, Sol, and Luna run on Azure OpenAI Global Standard, and
 their Fast mode runs on OpenAI's own priority processing. Claude Opus 5.5,
@@ -28,6 +28,8 @@ available. A provider key can still expose earlier models independently.
 
 Your research project is where you work with conversations and files. Your **funding workspace** is the account workspace that pays for Ace usage. Check both when working across personal and team projects.
 
+Browse the complete [Ace model directory](/openscience/ace-models) for the reviewed chat roster. The live model picker determines availability and current rates.
+
 ## Set up Ace
 
 The first-run setup offers Ace as its second step: **Turn on Ace** opens your
@@ -37,10 +39,10 @@ up later:
 1. Open **Customize → Models** and select **Ace**.
 2. Sign in in your browser when prompted.
 3. Confirm the workspace you want to use.
-4. Add purchased Wallet funds or enable Ace automatic reloads.
+4. Confirm available purchased or promotional credits. Add funds if needed; automatic reload is optional.
 5. Select an available model and start a conversation.
 
-Review [Pricing and usage](/openscience/pricing) before enabling reloads. Turning on Ace is a $0 authorization; usage is pay as you go.
+Review [Pricing and usage](/openscience/pricing) before enabling reloads. Enabling Ace access costs $0; usage is pay as you go. It does not authorize automatic card charges. Auto reload has a separate consent step in Billing.
 
 For account setup from a terminal:
 
@@ -56,7 +58,7 @@ On a machine without a browser, `openscience login --no-browser` prints the sign
 
 An Ace API key works the way a provider key does: the key alone selects the workspace it is billed to, with no browser round trip and no account signed in on the device.
 
-1. In the dashboard, open **Settings → Keys**, choose the workspace the key should bill, and create a key (`osk_…`).
+1. In the dashboard, choose the workspace the key should bill, open **API Keys**, and select **New key** (`osk_…`).
 2. In OpenScience, open **Customize → Models → Ace** and choose **Use an API key**, or run `openscience login --key osk_…`.
 
 The key may belong to any workspace you are a member of, including one outside the account signed in here; the Ace card labels it (`API key · Lab`), and **Manage Ace** opens that workspace's billing page. A key pasted into **Provider API keys** is redirected here, since it funds a Wallet rather than a provider. Signing out later forgets the key on this device without revoking it: revoke keys in the dashboard.
@@ -73,9 +75,13 @@ Requests already in progress keep their original funding workspace. Confirm the 
 
 Open **Wallet** in the Models panel, or visit [billing](https://app.syntheticsciences.ai/billing).
 
-Usage is calculated for the route that serves each request. Direct provider routes add no funding or service fee. OpenRouter routes include its funding fee (5.5% by default) once, already included in displayed Wallet rates; the card processing fee is shown separately at checkout. While automatic reloads are enabled, a purchased balance below the workspace's threshold ($5 by default) triggers one fixed reload ($20 by default); both are set under Billing, and the app shows the rule your workspace has configured. Account controls let you set a monthly usage limit and turn off future reloads.
+Usage is calculated for the route that serves each request. Direct provider routes add no funding or service fee. OpenRouter routes include its funding fee (5.5% by default) once, already included in displayed Wallet rates; the card processing fee is shown separately at checkout. Auto reload is a separate opt-in that requires a saved card. It adds a fixed $20 when purchased funds fall below $5, plus the disclosed processing fee. The reload amount and threshold are fixed; Billing lets you set the monthly automatic-charge limit and turn off future reloads. A managed-usage spending limit is a separate control. Valid purchased or promotional credits can fund requests without auto reload or a saved card.
 
 Switching to **Keys & subscriptions** changes model access: your keys and subscriptions serve the models they cover. The Wallet still funds what they cannot: a model no key covers, web search when no Firecrawl key is connected, and image generation. Each such call is marked in the trace (`funding: wallet`). Switching does **not** turn off automatic reloads. Use Wallet to change that authorization.
+
+## Review usage
+
+Open **Customize → Usage** to filter Managed, API keys, Local models, Subscriptions, and Unclassified activity by dates and model. Export matching daily totals as CSV. Managed records are Wallet charges; user-owned routes are device activity with estimates. See [Usage reports and CSV exports](/openscience/usage).
 
 ## Shared connections
 
@@ -116,7 +122,7 @@ costs without replacing them with catalog estimates; these diagnostic records
 do not independently verify invoices or change Wallet settlement. Shared trace
 usage is separate from the account's usage charts.
 
-See the [privacy policy](https://openscience.sh/privacy) for retention, account
+See [Privacy and data](/openscience/privacy) and the [privacy policy](https://openscience.sh/privacy) for retention, account
 controls, and deletion.
 
 ## Sign out

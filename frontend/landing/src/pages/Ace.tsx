@@ -252,9 +252,8 @@ const FAQ = [
     q: "Is Ace cheaper?",
     a: (
       <p>
-        Ace charges what the provider reports. Usage is billed at the provider's reported cost plus a 5.5% funding fee,
-        applied once per request, with no other markup. There is no Ace service fee. See{" "}
-        <a href={docs("pricing")}>pricing</a>.
+        Ace uses the serving route's Wallet rates. Direct routes add no funding or service fee. OpenRouter routes
+        include its 5.5% funding fee once in the displayed rates. See <a href={docs("pricing")}>pricing</a>.
       </p>
     ),
   },
@@ -262,10 +261,10 @@ const FAQ = [
     q: "How much does Ace cost?",
     a: (
       <p>
-        Activation is free. You add a $20 pay-as-you-go balance, and each request debits the provider's reported cost
-        plus a 5.5% funding fee once it settles. A request may reserve funds while it runs; unused reservations are
-        released, and a small request is never rounded up to a full cent. Card processing charges are disclosed at
-        checkout and are separate from your Wallet value.
+        Access is free to enable. Purchased funds or valid promotional credits cover pay-as-you-go usage, without
+        requiring a saved card. Each request settles at its serving route's Wallet rate. A request may reserve funds
+        while it runs; unused reservations are released, and a small request is never rounded up to a full cent. Card
+        processing charges are disclosed at checkout and are separate from your Wallet value.
       </p>
     ),
   },
@@ -284,8 +283,8 @@ const FAQ = [
     q: "Can I set spend limits?",
     a: (
       <p>
-        Yes. Auto reload is off until you turn it on, and when it is on you set a monthly cap. With auto reload off,
-        spending stops when the balance runs out.
+        Yes. Set a managed-usage limit independently of payment setup. Auto reload requires separate consent and a saved
+        card, with its own monthly charge limit. It adds a fixed $20 below $5, plus the disclosed processing fee.
       </p>
     ),
   },
@@ -345,7 +344,10 @@ export default function Ace() {
             <div data-slot="pricing-copy">
               <p>
                 <strong>Add a $20 pay-as-you-go balance</strong>{" "}
-                <span>(provider cost plus a 5.5% funding fee per request; card processing fee shown at checkout)</span>
+                <span>
+                  (direct routes add no fee; OpenRouter funding fees are included in Wallet rates; card processing is
+                  separate)
+                </span>
               </p>
               <p>Models and search in one Wallet, memory coming soon. Set a monthly cap. Cancel any time.</p>
             </div>
@@ -379,22 +381,22 @@ export default function Ace() {
               <li>
                 <span data-slot="marker">1.</span>
                 <div>
-                  <strong>Sign in and add a $20 balance</strong>Customize → Models → Ace, or follow the{" "}
+                  <strong>Sign in and check your available credit</strong>Customize → Models → Ace, or follow the{" "}
                   <a href={docs("ace")}>setup instructions</a>
                 </div>
               </li>
               <li>
                 <span data-slot="marker">2.</span>
                 <div>
-                  <strong>Pay per request</strong>At the provider's <a href={docs("pricing")}>reported cost</a> plus a
-                  5.5% funding fee, settled from verified usage, with no Ace fee
+                  <strong>Pay per request</strong>At the selected route's <a href={docs("pricing")}>Wallet rates</a>,
+                  settled from verified usage. Direct routes add no fee; OpenRouter funding fees are included once
                 </div>
               </li>
               <li>
                 <span data-slot="marker">3.</span>
                 <div>
-                  <strong>Auto reload, if you want it</strong>When your balance falls below $5 we add $20, up to the
-                  monthly cap you set
+                  <strong>Auto reload, if you want it</strong>With separate consent and a saved card, add $20 when
+                  purchased funds fall below $5, plus the disclosed processing fee, up to your monthly charge limit
                 </div>
               </li>
             </ol>
